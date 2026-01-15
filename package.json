@@ -1,0 +1,59 @@
+{
+  "name": "webhook-verify",
+  "version": "1.0.0",
+  "description": "Verify webhooks from popular services with zero dependencies",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "webhook",
+    "verify",
+    "signature",
+    "hmac",
+    "stripe",
+    "github",
+    "shopify",
+    "slack",
+    "discord",
+    "twilio"
+  ],
+  "author": "Codehooks.io <support@codehooks.io> (https://codehooks.io)",
+  "homepage": "https://github.com/nicedoc/webhook-verify",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicedoc/webhook-verify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nicedoc/webhook-verify/issues"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://codehooks.io"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.0"
+  }
+}

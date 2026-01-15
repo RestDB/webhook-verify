@@ -1,0 +1,70 @@
+/**
+ * Supported webhook providers
+ */
+export type Provider =
+  | 'stripe'
+  | 'github'
+  | 'shopify'
+  | 'slack'
+  | 'twilio'
+  | 'discord'
+  | 'linear'
+  | 'vercel'
+  | 'svix'
+  | 'clerk'
+  | 'sendgrid'
+  | 'paddle'
+  | 'intercom'
+  | 'mailchimp'
+  | 'gitlab'
+  | 'typeform';
+
+/**
+ * Options for providers that support timestamp tolerance
+ */
+export interface TimestampOptions {
+  /**
+   * Maximum age of the webhook in seconds (default: 300 = 5 minutes)
+   */
+  tolerance?: number;
+}
+
+/**
+ * Twilio-specific options requiring the request URL
+ */
+export interface TwilioOptions {
+  /**
+   * The full URL of the webhook endpoint (required for Twilio validation)
+   */
+  url: string;
+}
+
+/**
+ * Provider-specific verification options
+ */
+export type VerifyOptions = TimestampOptions | TwilioOptions;
+
+/**
+ * Internal interface for provider verification functions
+ */
+export interface ProviderVerifier {
+  /**
+   * Verify a webhook payload
+   * @param payload - The raw request body (string or Buffer)
+   * @param signature - The signature from the webhook header
+   * @param secret - The webhook secret or public key
+   * @param options - Provider-specific options
+   * @returns true if the signature is valid, false otherwise
+   */
+  verify(
+    payload: string | Buffer,
+    signature: string,
+    secret: string,
+    options?: VerifyOptions
+  ): boolean;
+}
+
+/**
+ * Registry of all provider verifiers
+ */
+export type ProviderRegistry = Record<Provider, ProviderVerifier>;
