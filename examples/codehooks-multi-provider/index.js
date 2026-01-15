@@ -12,11 +12,10 @@
  */
 
 import { app, Datastore } from 'codehooks-js';
-import { verify, getSignature } from 'webhook-verify';
+import { verify } from 'webhook-verify';
 
 // Stripe webhooks
 app.post('/webhooks/stripe', async (req, res) => {
-  // Pass headers directly - throws if signature header is missing
   const isValid = verify('stripe', req.rawBody, req.headers, process.env.STRIPE_WEBHOOK_SECRET);
 
   if (!isValid) {
@@ -31,24 +30,21 @@ app.post('/webhooks/stripe', async (req, res) => {
 
 // GitHub webhooks
 app.post('/webhooks/github', async (req, res) => {
-  // Pass headers directly - throws if signature header is missing
   const isValid = verify('github', req.rawBody, req.headers, process.env.GITHUB_WEBHOOK_SECRET);
 
   if (!isValid) {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  // Use getSignature() if you need the event type
-  const sig = getSignature('github', req.headers);
+  const eventType = req.headers['x-github-event'];
   const payload = JSON.parse(req.rawBody);
-  await logWebhook('github', sig.eventType, payload);
+  await logWebhook('github', eventType, payload);
 
   res.json({ received: true });
 });
 
 // Slack webhooks
 app.post('/webhooks/slack', async (req, res) => {
-  // Pass headers directly - signature and timestamp handled automatically
   const isValid = verify('slack', req.rawBody, req.headers, process.env.SLACK_SIGNING_SECRET);
 
   if (!isValid) {

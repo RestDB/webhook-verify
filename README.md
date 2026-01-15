@@ -96,42 +96,6 @@ Returns an array of all supported provider names.
 
 Check if a provider is supported.
 
-### `getSignature(provider, headers)`
-
-Extract signature data from request headers. Useful when you need access to additional metadata like event type or message ID.
-
-```typescript
-import { verify, getSignature } from 'webhook-verify';
-
-const sig = getSignature('github', req.headers);
-
-if (sig) {
-  console.log(`Event type: ${sig.eventType}`); // e.g., "push", "pull_request"
-}
-```
-
-**SignatureData object:**
-```typescript
-{
-  signature: string;      // Formatted for verify()
-  rawSignature?: string;  // Original header value
-  timestamp?: string;     // For providers with timestamps
-  messageId?: string;     // For Svix-based providers
-  eventType?: string;     // Event type (GitHub, Shopify, etc.)
-}
-```
-
-### `getHeaderNames(provider)`
-
-Get the expected header names for a provider (useful for documentation or debugging).
-
-```typescript
-import { getHeaderNames } from 'webhook-verify';
-
-getHeaderNames('slack');
-// { signature: 'x-slack-signature', timestamp: 'x-slack-request-timestamp' }
-```
-
 ## Raw Body Handling
 
 Webhook signatures are computed over the **exact bytes** sent by the provider. You must use the raw, unparsed request body - not `JSON.parse(body)` or similar.
@@ -218,7 +182,7 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
 ### GitHub
 
 ```typescript
-import { verify, getSignature } from 'webhook-verify';
+import { verify } from 'webhook-verify';
 
 app.post('/webhook/github', express.raw({ type: 'application/json' }), (req, res) => {
   const isValid = verify('github', req.body, req.headers, process.env.GITHUB_WEBHOOK_SECRET);
@@ -227,16 +191,15 @@ app.post('/webhook/github', express.raw({ type: 'application/json' }), (req, res
     return res.status(401).send('Invalid signature');
   }
 
-  // Use getSignature() if you need the event type
-  const sig = getSignature('github', req.headers);
-  console.log(`Event type: ${sig.eventType}`); // e.g., "push", "pull_request"
+  const event = req.headers['x-github-event']; // e.g., "push", "pull_request"
+  // Process webhook...
 });
 ```
 
 ### Shopify
 
 ```typescript
-import { verify, getSignature } from 'webhook-verify';
+import { verify } from 'webhook-verify';
 
 app.post('/webhook/shopify', express.raw({ type: 'application/json' }), (req, res) => {
   const isValid = verify('shopify', req.body, req.headers, process.env.SHOPIFY_WEBHOOK_SECRET);
@@ -245,8 +208,8 @@ app.post('/webhook/shopify', express.raw({ type: 'application/json' }), (req, re
     return res.status(401).send('Invalid signature');
   }
 
-  const sig = getSignature('shopify', req.headers);
-  console.log(`Topic: ${sig.eventType}`); // e.g., "orders/create"
+  const topic = req.headers['x-shopify-topic']; // e.g., "orders/create"
+  // Process webhook...
 });
 ```
 
@@ -305,7 +268,7 @@ app.post('/webhook/discord', express.raw({ type: 'application/json' }), (req, re
 ### Svix / Clerk
 
 ```typescript
-import { verify, getSignature } from 'webhook-verify';
+import { verify } from 'webhook-verify';
 
 app.post('/webhook/clerk', express.raw({ type: 'application/json' }), (req, res) => {
   // Svix requires signature, timestamp, and message ID - handled automatically
@@ -315,16 +278,15 @@ app.post('/webhook/clerk', express.raw({ type: 'application/json' }), (req, res)
     return res.status(401).send('Invalid signature');
   }
 
-  // Use getSignature() if you need the message ID
-  const sig = getSignature('clerk', req.headers);
-  console.log(`Message ID: ${sig.messageId}`);
+  const messageId = req.headers['svix-id'];
+  // Process webhook...
 });
 ```
 
 ### GitLab
 
 ```typescript
-import { verify, getSignature } from 'webhook-verify';
+import { verify } from 'webhook-verify';
 
 app.post('/webhook/gitlab', express.json(), (req, res) => {
   // GitLab uses token comparison (not signature)
@@ -334,8 +296,8 @@ app.post('/webhook/gitlab', express.json(), (req, res) => {
     return res.status(401).send('Invalid token');
   }
 
-  const sig = getSignature('gitlab', req.headers);
-  console.log(`Event: ${sig.eventType}`); // e.g., "Push Hook"
+  const event = req.headers['x-gitlab-event']; // e.g., "Push Hook"
+  // Process webhook...
 });
 ```
 
