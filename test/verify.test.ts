@@ -22,6 +22,74 @@ describe('webhook-verify', () => {
     });
   });
 
+  describe('key rotation (additionalSecrets)', () => {
+    const newSecret = 'new-secret';
+    const oldSecret = 'old-secret';
+    const olderSecret = 'older-secret';
+    const payload = '{"test":"data"}';
+
+    function generateGitHubSignature(body: string, key: string): string {
+      const sig = createHmac('sha256', key).update(body).digest('hex');
+      return `sha256=${sig}`;
+    }
+
+    it('should verify with primary secret', () => {
+      const signature = generateGitHubSignature(payload, newSecret);
+      assert.strictEqual(
+        verify('github', payload, signature, newSecret, { additionalSecrets: [oldSecret] }),
+        true
+      );
+    });
+
+    it('should verify with first additional secret when primary fails', () => {
+      const signature = generateGitHubSignature(payload, oldSecret);
+      assert.strictEqual(
+        verify('github', payload, signature, newSecret, { additionalSecrets: [oldSecret] }),
+        true
+      );
+    });
+
+    it('should verify with second additional secret when primary and first fail', () => {
+      const signature = generateGitHubSignature(payload, olderSecret);
+      assert.strictEqual(
+        verify('github', payload, signature, newSecret, { additionalSecrets: [oldSecret, olderSecret] }),
+        true
+      );
+    });
+
+    it('should reject when no secrets match', () => {
+      const signature = generateGitHubSignature(payload, 'unknown-secret');
+      assert.strictEqual(
+        verify('github', payload, signature, newSecret, { additionalSecrets: [oldSecret] }),
+        false
+      );
+    });
+
+    it('should work without additionalSecrets option', () => {
+      const signature = generateGitHubSignature(payload, newSecret);
+      assert.strictEqual(verify('github', payload, signature, newSecret), true);
+    });
+
+    it('should work with empty additionalSecrets array', () => {
+      const signature = generateGitHubSignature(payload, newSecret);
+      assert.strictEqual(
+        verify('github', payload, signature, newSecret, { additionalSecrets: [] }),
+        true
+      );
+    });
+
+    it('should work with headers object and additionalSecrets', () => {
+      const sig = createHmac('sha256', oldSecret).update(payload).digest('hex');
+      const headers = {
+        'x-hub-signature-256': `sha256=${sig}`,
+      };
+      assert.strictEqual(
+        verify('github', payload, headers, newSecret, { additionalSecrets: [oldSecret] }),
+        true
+      );
+    });
+  });
+
   describe('verify with headers', () => {
     const secret = 'test-secret';
     const payload = '{"test":"data"}';

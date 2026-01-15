@@ -429,6 +429,24 @@ export default app.init();
 
 ## Options
 
+### Key Rotation (additionalSecrets)
+
+When rotating webhook secrets, you need to accept both old and new secrets during a transition period. Use `additionalSecrets` to verify against multiple secrets:
+
+```typescript
+// During secret rotation, accept both new and old secrets
+verify('github', payload, headers, newSecret, {
+  additionalSecrets: [oldSecret],
+});
+
+// Support multiple old secrets if needed
+verify('stripe', payload, headers, currentSecret, {
+  additionalSecrets: [previousSecret, olderSecret],
+});
+```
+
+The primary secret is tried first. If verification fails, each additional secret is tried in order until one succeeds or all fail. This works with all providers.
+
 ### Timestamp Tolerance
 
 For providers that include timestamps (Stripe, Slack, Svix), you can customize the tolerance window:

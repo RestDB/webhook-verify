@@ -21,9 +21,21 @@ export type Provider =
   | 'crystallize';
 
 /**
+ * Base options available to all providers
+ */
+export interface BaseOptions {
+  /**
+   * Additional secrets to try if the primary secret fails.
+   * Useful for secret rotation - allows accepting both old and new secrets
+   * during a transition period.
+   */
+  additionalSecrets?: string[];
+}
+
+/**
  * Options for providers that support timestamp tolerance
  */
-export interface TimestampOptions {
+export interface TimestampOptions extends BaseOptions {
   /**
    * Maximum age of the webhook in seconds (default: 300 = 5 minutes)
    */
@@ -33,7 +45,7 @@ export interface TimestampOptions {
 /**
  * Twilio-specific options requiring the request URL
  */
-export interface TwilioOptions {
+export interface TwilioOptions extends BaseOptions {
   /**
    * The full URL of the webhook endpoint (required for Twilio validation)
    */
@@ -43,7 +55,7 @@ export interface TwilioOptions {
 /**
  * Crystallize-specific options requiring URL and method
  */
-export interface CrystallizeOptions {
+export interface CrystallizeOptions extends BaseOptions {
   /**
    * The full URL of the webhook endpoint (required for Crystallize validation)
    */
@@ -57,7 +69,7 @@ export interface CrystallizeOptions {
 /**
  * Provider-specific verification options
  */
-export type VerifyOptions = TimestampOptions | TwilioOptions | CrystallizeOptions;
+export type VerifyOptions = BaseOptions | TimestampOptions | TwilioOptions | CrystallizeOptions;
 
 /**
  * Internal interface for provider verification functions

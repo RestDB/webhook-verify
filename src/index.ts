@@ -10,7 +10,7 @@ import type { Provider, VerifyOptions } from './types.js';
  * @param payload - The raw request body (string or Buffer)
  * @param signatureOrHeaders - The signature string OR request headers object
  * @param secret - The webhook secret, API key, or public key
- * @param options - Provider-specific options (e.g., timestamp tolerance)
+ * @param options - Provider-specific options (e.g., timestamp tolerance, additionalSecrets)
  * @returns true if the signature is valid, false otherwise
  * @throws Error if headers object is passed but required signature headers are missing
  *
@@ -26,6 +26,11 @@ import type { Provider, VerifyOptions } from './types.js';
  *
  * // With custom timestamp tolerance
  * const isValid = verify('stripe', body, req.headers, secret, { tolerance: 600 });
+ *
+ * // With additional secrets for key rotation
+ * const isValid = verify('stripe', body, req.headers, newSecret, {
+ *   additionalSecrets: [oldSecret]
+ * });
  * ```
  */
 export function verify(
@@ -57,7 +62,22 @@ export function verify(
     signature = sigData.signature;
   }
 
-  return verifier.verify(payload, signature, secret, options);
+  // Try the primary secret first
+  if (verifier.verify(payload, signature, secret, options)) {
+    return true;
+  }
+
+  // If primary secret failed and additionalSecrets provided, try each one
+  const additionalSecrets = options?.additionalSecrets;
+  if (additionalSecrets && additionalSecrets.length > 0) {
+    for (const altSecret of additionalSecrets) {
+      if (verifier.verify(payload, signature, altSecret, options)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -75,7 +95,7 @@ export function isProviderSupported(provider: string): provider is Provider {
 }
 
 // Re-export types
-export type { Provider, VerifyOptions, TimestampOptions, TwilioOptions, CrystallizeOptions } from './types.js';
+export type { Provider, VerifyOptions, BaseOptions, TimestampOptions, TwilioOptions, CrystallizeOptions } from './types.js';
 
 // Re-export individual providers for direct access
 export * from './providers/index.js';
