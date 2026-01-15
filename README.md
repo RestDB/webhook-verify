@@ -84,6 +84,51 @@ Returns an array of all supported provider names.
 
 Check if a provider is supported.
 
+### `getSignature(provider, headers)`
+
+Extract signature data from request headers. Returns a `SignatureData` object or `null` if required headers are missing.
+
+```typescript
+import { verify, getSignature } from 'webhook-verify';
+
+// Automatically extracts and formats the signature
+const sig = getSignature('stripe', req.headers);
+
+if (!sig) {
+  return res.status(400).send('Missing signature headers');
+}
+
+// sig.signature is ready to use with verify()
+const isValid = verify('stripe', req.rawBody, sig.signature, secret);
+```
+
+The helper handles:
+- Case-insensitive header lookup
+- Combining multiple headers (e.g., Slack's signature + timestamp)
+- Extracting event types when available
+
+**SignatureData object:**
+```typescript
+{
+  signature: string;      // Formatted for verify()
+  rawSignature?: string;  // Original header value
+  timestamp?: string;     // For providers with timestamps
+  messageId?: string;     // For Svix-based providers
+  eventType?: string;     // Event type (GitHub, Shopify, etc.)
+}
+```
+
+### `getHeaderNames(provider)`
+
+Get the expected header names for a provider (useful for documentation or debugging).
+
+```typescript
+import { getHeaderNames } from 'webhook-verify';
+
+getHeaderNames('slack');
+// { signature: 'x-slack-signature', timestamp: 'x-slack-request-timestamp' }
+```
+
 ## Raw Body Handling
 
 Webhook signatures are computed over the **exact bytes** sent by the provider. You must use the raw, unparsed request body - not `JSON.parse(body)` or similar.

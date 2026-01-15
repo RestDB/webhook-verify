@@ -68,3 +68,8 @@ export {
 } from './algorithms.js';
 
 export type { HmacAlgorithm, SignatureEncoding, HmacOptions, TimestampHmacOptions, RsaOptions } from './algorithms.js';
+
+// Re-export header extraction helpers
+export { getSignature, getHeaderNames } from './headers.js';
+
+export type { SignatureData, Headers } from './headers.js';

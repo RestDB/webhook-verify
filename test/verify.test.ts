@@ -8,6 +8,8 @@ import {
   hmac,
   timingSafeEqual,
   validateTimestamp,
+  getSignature,
+  getHeaderNames,
 } from '../src/index.js';
 
 describe('webhook-verify', () => {
@@ -492,6 +494,136 @@ describe('webhook-verify', () => {
       it('should accept string timestamp', () => {
         const ts = String(Math.floor(Date.now() / 1000));
         assert.strictEqual(validateTimestamp(ts), true);
+      });
+    });
+  });
+
+  describe('Header Helpers', () => {
+    describe('getSignature', () => {
+      it('should extract Stripe signature', () => {
+        const headers = { 'stripe-signature': 't=123,v1=abc' };
+        const result = getSignature('stripe', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 't=123,v1=abc');
+      });
+
+      it('should extract GitHub signature', () => {
+        const headers = {
+          'x-hub-signature-256': 'sha256=abc123',
+          'x-github-event': 'push',
+        };
+        const result = getSignature('github', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 'sha256=abc123');
+        assert.strictEqual(result.eventType, 'push');
+      });
+
+      it('should extract Shopify signature', () => {
+        const headers = {
+          'x-shopify-hmac-sha256': 'abc123',
+          'x-shopify-topic': 'orders/create',
+        };
+        const result = getSignature('shopify', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 'abc123');
+        assert.strictEqual(result.eventType, 'orders/create');
+      });
+
+      it('should extract and format Slack signature with timestamp', () => {
+        const headers = {
+          'x-slack-signature': 'v0=abc123',
+          'x-slack-request-timestamp': '1234567890',
+        };
+        const result = getSignature('slack', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 'v0=abc123,t=1234567890');
+        assert.strictEqual(result.rawSignature, 'v0=abc123');
+        assert.strictEqual(result.timestamp, '1234567890');
+      });
+
+      it('should extract and format Discord signature with timestamp', () => {
+        const headers = {
+          'x-signature-ed25519': 'abc123',
+          'x-signature-timestamp': '1234567890',
+        };
+        const result = getSignature('discord', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 'abc123,t=1234567890');
+        assert.strictEqual(result.timestamp, '1234567890');
+      });
+
+      it('should extract and format Svix signature with all parts', () => {
+        const headers = {
+          'svix-signature': 'v1,abc123',
+          'svix-timestamp': '1234567890',
+          'svix-id': 'msg_123',
+        };
+        const result = getSignature('svix', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 'v1,abc123,t=1234567890,id=msg_123');
+        assert.strictEqual(result.messageId, 'msg_123');
+      });
+
+      it('should extract Clerk signature (via Svix)', () => {
+        const headers = {
+          'svix-signature': 'v1,abc123',
+          'svix-timestamp': '1234567890',
+          'svix-id': 'msg_456',
+        };
+        const result = getSignature('clerk', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 'v1,abc123,t=1234567890,id=msg_456');
+      });
+
+      it('should extract GitLab token', () => {
+        const headers = {
+          'x-gitlab-token': 'secret-token',
+          'x-gitlab-event': 'Push Hook',
+        };
+        const result = getSignature('gitlab', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 'secret-token');
+        assert.strictEqual(result.eventType, 'Push Hook');
+      });
+
+      it('should return null for missing headers', () => {
+        assert.strictEqual(getSignature('stripe', {}), null);
+        assert.strictEqual(getSignature('slack', { 'x-slack-signature': 'abc' }), null);
+        assert.strictEqual(getSignature('svix', { 'svix-signature': 'abc' }), null);
+      });
+
+      it('should handle case-insensitive headers', () => {
+        const headers = { 'Stripe-Signature': 't=123,v1=abc' };
+        const result = getSignature('stripe', headers);
+        assert.ok(result);
+        assert.strictEqual(result.signature, 't=123,v1=abc');
+      });
+
+      it('should throw for unknown provider', () => {
+        assert.throws(
+          () => getSignature('unknown' as any, {}),
+          /Unknown webhook provider/
+        );
+      });
+    });
+
+    describe('getHeaderNames', () => {
+      it('should return Stripe header names', () => {
+        const names = getHeaderNames('stripe');
+        assert.strictEqual(names.signature, 'stripe-signature');
+      });
+
+      it('should return Slack header names', () => {
+        const names = getHeaderNames('slack');
+        assert.strictEqual(names.signature, 'x-slack-signature');
+        assert.strictEqual(names.timestamp, 'x-slack-request-timestamp');
+      });
+
+      it('should return Svix header names', () => {
+        const names = getHeaderNames('svix');
+        assert.strictEqual(names.signature, 'svix-signature');
+        assert.strictEqual(names.timestamp, 'svix-timestamp');
+        assert.strictEqual(names.id, 'svix-id');
       });
     });
   });
