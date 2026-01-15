@@ -688,6 +688,67 @@ Learn more about webhook handling and verification:
 
 [Get started for free](https://codehooks.io) | [Documentation](https://codehooks.io/docs) | [Examples](https://github.com/RestDB/webhook-verify/tree/main/examples)
 
+## Contributing
+
+We welcome contributions, especially new provider implementations. Here's how to add support for a new webhook provider:
+
+### Adding a New Provider
+
+1. **Create the provider file** at `src/providers/{provider}.ts`:
+
+```typescript
+import { createHmac } from 'crypto';
+import { secureCompare } from '../utils/crypto.js';
+import type { ProviderVerifier } from '../types.js';
+
+export const myprovider: ProviderVerifier = {
+  verify(payload, signature, secret, options) {
+    // Implement verification logic
+    // Return true if valid, false otherwise
+  },
+};
+```
+
+2. **Register the provider** in `src/providers/index.ts`
+
+3. **Add the provider type** to the `Provider` union in `src/types.ts`
+
+4. **Add header extraction** in `src/headers.ts` (both `providerHeaders` and `getHeaderNames`)
+
+5. **Add tests** in `test/verify.test.ts`
+
+6. **Document it** in README.md (Supported Providers table + example if needed)
+
+### Provider Checklist
+
+- [ ] Uses timing-safe comparison for signatures
+- [ ] Handles both string and Buffer payloads
+- [ ] Returns `false` for invalid inputs (don't throw)
+- [ ] Includes timestamp validation if the provider uses it
+- [ ] Has test coverage with valid and invalid signatures
+
+### Running Tests
+
+```bash
+npm install
+npm test
+npm run build
+```
+
+### Providers We'd Like to Add
+
+- Hubspot
+- Zendesk
+- Square
+- Braintree
+- Plaid
+- Segment
+- Customer.io
+- Postmark
+- ...and many more!
+
+Check the [issues](https://github.com/RestDB/webhook-verify/issues) for provider requests or open one for a provider you'd like to see supported.
+
 ## License
 
 MIT
