@@ -7,7 +7,7 @@
 
 Verify webhooks from popular services with zero dependencies. A unified API for webhook signature verification.
 
-Built and maintained by [Codehooks.io](https://codehooks.io) - the serverless backend platform.
+Built and maintained by [Codehooks.io](https://codehooks.io) - the serverless backend platform for webhook integrations and event-driven automations.
 
 ## Installation
 
@@ -32,24 +32,24 @@ if (!isValid) {
 
 ## Supported Providers
 
-| Provider | Header | Method |
-|----------|--------|--------|
-| Stripe | `Stripe-Signature` | HMAC-SHA256 + timestamp |
-| GitHub | `X-Hub-Signature-256` | HMAC-SHA256 |
-| Shopify | `X-Shopify-Hmac-Sha256` | HMAC-SHA256 (base64) |
-| Slack | `X-Slack-Signature` | HMAC-SHA256 + timestamp |
-| Twilio | `X-Twilio-Signature` | HMAC-SHA1 |
-| Discord | `X-Signature-Ed25519` | Ed25519 |
-| Linear | `Linear-Signature` | HMAC-SHA256 |
-| Vercel | `x-vercel-signature` | HMAC-SHA1 |
-| Svix | `svix-signature` | HMAC-SHA256 + timestamp |
-| Clerk | `svix-signature` | HMAC-SHA256 (Svix) |
-| SendGrid | `X-Twilio-Email-Event-Webhook-Signature` | ECDSA |
-| Paddle | `Paddle-Signature` | RSA-SHA256 |
-| Intercom | `X-Hub-Signature` | HMAC-SHA1 |
-| Mailchimp | `X-Mailchimp-Signature` | HMAC-SHA256 (base64) |
-| GitLab | `X-Gitlab-Token` | Token comparison |
-| Typeform | `Typeform-Signature` | HMAC-SHA256 (base64) |
+| Provider  | Header                                   | Method                  |
+| --------- | ---------------------------------------- | ----------------------- |
+| Stripe    | `Stripe-Signature`                       | HMAC-SHA256 + timestamp |
+| GitHub    | `X-Hub-Signature-256`                    | HMAC-SHA256             |
+| Shopify   | `X-Shopify-Hmac-Sha256`                  | HMAC-SHA256 (base64)    |
+| Slack     | `X-Slack-Signature`                      | HMAC-SHA256 + timestamp |
+| Twilio    | `X-Twilio-Signature`                     | HMAC-SHA1               |
+| Discord   | `X-Signature-Ed25519`                    | Ed25519                 |
+| Linear    | `Linear-Signature`                       | HMAC-SHA256             |
+| Vercel    | `x-vercel-signature`                     | HMAC-SHA1               |
+| Svix      | `svix-signature`                         | HMAC-SHA256 + timestamp |
+| Clerk     | `svix-signature`                         | HMAC-SHA256 (Svix)      |
+| SendGrid  | `X-Twilio-Email-Event-Webhook-Signature` | ECDSA                   |
+| Paddle    | `Paddle-Signature`                       | RSA-SHA256              |
+| Intercom  | `X-Hub-Signature`                        | HMAC-SHA1               |
+| Mailchimp | `X-Mailchimp-Signature`                  | HMAC-SHA256 (base64)    |
+| GitLab    | `X-Gitlab-Token`                         | Token comparison        |
+| Typeform  | `Typeform-Signature`                     | HMAC-SHA256 (base64)    |
 
 ## API
 
@@ -68,6 +68,7 @@ function verify(
 ```
 
 **Parameters:**
+
 - `provider` - The webhook provider name
 - `payload` - The raw request body (string or Buffer)
 - `signatureOrHeaders` - Either the request headers object OR a signature string
@@ -130,7 +131,8 @@ import { verify } from 'webhook-verify';
 const app = express();
 
 // Apply raw body parser to webhook routes
-app.post('/webhook/stripe',
+app.post(
+  '/webhook/stripe',
   express.raw({ type: 'application/json' }),
   (req, res) => {
     // req.body is a Buffer containing the raw bytes
@@ -146,14 +148,14 @@ app.use(express.json());
 
 ```typescript
 // Original webhook payload from provider
-'{"id":123,"name":"test"}'
+'{"id":123,"name":"test"}';
 
 // After JSON.parse() + JSON.stringify()
-'{"id":123,"name":"test"}'  // Might look the same...
+'{"id":123,"name":"test"}'; // Might look the same...
 
 // But sometimes:
-'{"name":"test","id":123}'  // Key order changed!
-'{ "id": 123, "name": "test" }'  // Whitespace changed!
+'{"name":"test","id":123}'; // Key order changed!
+'{ "id": 123, "name": "test" }'; // Whitespace changed!
 
 // The signature won't match because the bytes are different
 ```
@@ -165,16 +167,25 @@ app.use(express.json());
 ```typescript
 import { verify } from 'webhook-verify';
 
-app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res) => {
-  const isValid = verify('stripe', req.body, req.headers, process.env.STRIPE_WEBHOOK_SECRET);
+app.post(
+  '/webhook/stripe',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const isValid = verify(
+      'stripe',
+      req.body,
+      req.headers,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    const event = JSON.parse(req.body);
+    // Process webhook...
   }
-
-  const event = JSON.parse(req.body);
-  // Process webhook...
-});
+);
 ```
 
 ### GitHub
@@ -182,16 +193,25 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
 ```typescript
 import { verify } from 'webhook-verify';
 
-app.post('/webhook/github', express.raw({ type: 'application/json' }), (req, res) => {
-  const isValid = verify('github', req.body, req.headers, process.env.GITHUB_WEBHOOK_SECRET);
+app.post(
+  '/webhook/github',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const isValid = verify(
+      'github',
+      req.body,
+      req.headers,
+      process.env.GITHUB_WEBHOOK_SECRET
+    );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    const event = req.headers['x-github-event']; // e.g., "push", "pull_request"
+    // Process webhook...
   }
-
-  const event = req.headers['x-github-event']; // e.g., "push", "pull_request"
-  // Process webhook...
-});
+);
 ```
 
 ### Shopify
@@ -199,16 +219,25 @@ app.post('/webhook/github', express.raw({ type: 'application/json' }), (req, res
 ```typescript
 import { verify } from 'webhook-verify';
 
-app.post('/webhook/shopify', express.raw({ type: 'application/json' }), (req, res) => {
-  const isValid = verify('shopify', req.body, req.headers, process.env.SHOPIFY_WEBHOOK_SECRET);
+app.post(
+  '/webhook/shopify',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const isValid = verify(
+      'shopify',
+      req.body,
+      req.headers,
+      process.env.SHOPIFY_WEBHOOK_SECRET
+    );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    const topic = req.headers['x-shopify-topic']; // e.g., "orders/create"
+    // Process webhook...
   }
-
-  const topic = req.headers['x-shopify-topic']; // e.g., "orders/create"
-  // Process webhook...
-});
+);
 ```
 
 ### Slack
@@ -216,16 +245,25 @@ app.post('/webhook/shopify', express.raw({ type: 'application/json' }), (req, re
 ```typescript
 import { verify } from 'webhook-verify';
 
-app.post('/webhook/slack', express.raw({ type: 'application/x-www-form-urlencoded' }), (req, res) => {
-  // Slack requires both signature and timestamp - handled automatically
-  const isValid = verify('slack', req.body, req.headers, process.env.SLACK_SIGNING_SECRET);
+app.post(
+  '/webhook/slack',
+  express.raw({ type: 'application/x-www-form-urlencoded' }),
+  (req, res) => {
+    // Slack requires both signature and timestamp - handled automatically
+    const isValid = verify(
+      'slack',
+      req.body,
+      req.headers,
+      process.env.SLACK_SIGNING_SECRET
+    );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    // Process webhook...
   }
-
-  // Process webhook...
-});
+);
 ```
 
 ### Twilio
@@ -233,17 +271,27 @@ app.post('/webhook/slack', express.raw({ type: 'application/x-www-form-urlencode
 ```typescript
 import { verify } from 'webhook-verify';
 
-app.post('/webhook/twilio', express.urlencoded({ extended: false }), (req, res) => {
-  // Twilio requires the full URL for verification
-  const url = `https://${req.headers.host}${req.originalUrl}`;
-  const isValid = verify('twilio', req.body, req.headers, process.env.TWILIO_AUTH_TOKEN, { url });
+app.post(
+  '/webhook/twilio',
+  express.urlencoded({ extended: false }),
+  (req, res) => {
+    // Twilio requires the full URL for verification
+    const url = `https://${req.headers.host}${req.originalUrl}`;
+    const isValid = verify(
+      'twilio',
+      req.body,
+      req.headers,
+      process.env.TWILIO_AUTH_TOKEN,
+      { url }
+    );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    // Process webhook...
   }
-
-  // Process webhook...
-});
+);
 ```
 
 ### Discord
@@ -251,16 +299,25 @@ app.post('/webhook/twilio', express.urlencoded({ extended: false }), (req, res) 
 ```typescript
 import { verify } from 'webhook-verify';
 
-app.post('/webhook/discord', express.raw({ type: 'application/json' }), (req, res) => {
-  // Discord uses Ed25519 - signature and timestamp handled automatically
-  const isValid = verify('discord', req.body, req.headers, process.env.DISCORD_PUBLIC_KEY);
+app.post(
+  '/webhook/discord',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    // Discord uses Ed25519 - signature and timestamp handled automatically
+    const isValid = verify(
+      'discord',
+      req.body,
+      req.headers,
+      process.env.DISCORD_PUBLIC_KEY
+    );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    // Process interaction...
   }
-
-  // Process interaction...
-});
+);
 ```
 
 ### Svix / Clerk
@@ -268,17 +325,26 @@ app.post('/webhook/discord', express.raw({ type: 'application/json' }), (req, re
 ```typescript
 import { verify } from 'webhook-verify';
 
-app.post('/webhook/clerk', express.raw({ type: 'application/json' }), (req, res) => {
-  // Svix requires signature, timestamp, and message ID - handled automatically
-  const isValid = verify('clerk', req.body, req.headers, process.env.CLERK_WEBHOOK_SECRET);
+app.post(
+  '/webhook/clerk',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    // Svix requires signature, timestamp, and message ID - handled automatically
+    const isValid = verify(
+      'clerk',
+      req.body,
+      req.headers,
+      process.env.CLERK_WEBHOOK_SECRET
+    );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    const messageId = req.headers['svix-id'];
+    // Process webhook...
   }
-
-  const messageId = req.headers['svix-id'];
-  // Process webhook...
-});
+);
 ```
 
 ### GitLab
@@ -288,7 +354,12 @@ import { verify } from 'webhook-verify';
 
 app.post('/webhook/gitlab', express.json(), (req, res) => {
   // GitLab uses token comparison (not signature)
-  const isValid = verify('gitlab', '', req.headers, process.env.GITLAB_WEBHOOK_SECRET);
+  const isValid = verify(
+    'gitlab',
+    '',
+    req.headers,
+    process.env.GITLAB_WEBHOOK_SECRET
+  );
 
   if (!isValid) {
     return res.status(401).send('Invalid token');
@@ -307,7 +378,12 @@ import { verify } from 'webhook-verify';
 
 app.post('/webhook/stripe', async (req, res) => {
   // Pass headers directly - uses req.rawBody for verification
-  const isValid = verify('stripe', req.rawBody, req.headers, process.env.STRIPE_WEBHOOK_SECRET);
+  const isValid = verify(
+    'stripe',
+    req.rawBody,
+    req.headers,
+    process.env.STRIPE_WEBHOOK_SECRET
+  );
 
   if (!isValid) {
     return res.status(401).json({ error: 'Invalid signature' });
@@ -338,7 +414,9 @@ verify('stripe', payload, signature, secret, { tolerance: 600 });
 Twilio requires the full webhook URL for verification:
 
 ```typescript
-verify('twilio', payload, signature, secret, { url: 'https://example.com/webhook' });
+verify('twilio', payload, signature, secret, {
+  url: 'https://example.com/webhook',
+});
 ```
 
 ## Generic Algorithm Handlers
@@ -355,9 +433,9 @@ hmac.verify(payload, signature, secret);
 
 // With options
 hmac.verify(payload, signature, secret, {
-  algorithm: 'sha256',  // 'sha1' | 'sha256' | 'sha512'
-  encoding: 'hex',      // 'hex' | 'base64'
-  prefix: 'sha256=',    // Strip prefix from signature
+  algorithm: 'sha256', // 'sha1' | 'sha256' | 'sha512'
+  encoding: 'hex', // 'hex' | 'base64'
+  prefix: 'sha256=', // Strip prefix from signature
 });
 
 // Generate a signature
@@ -377,7 +455,7 @@ hmac.verifyWithTimestamp(payload, signature, secret, timestamp, {
 // Slack-style: signature over "v0:timestamp:payload"
 hmac.verifyWithTimestamp(payload, signature, secret, timestamp, {
   format: 'v0:{timestamp}:{payload}',
-  tolerance: 300,  // Max age in seconds
+  tolerance: 300, // Max age in seconds
 });
 ```
 
@@ -421,32 +499,36 @@ validateTimestamp(timestamp, toleranceSeconds);
 import { hmac } from 'webhook-verify';
 
 // Use express.raw() to get the raw body as a Buffer
-app.post('/webhook/custom', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-signature'];
-  const timestamp = req.headers['x-timestamp'];
+app.post(
+  '/webhook/custom',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const signature = req.headers['x-signature'];
+    const timestamp = req.headers['x-timestamp'];
 
-  // req.body is a Buffer when using express.raw()
-  const isValid = hmac.verifyWithTimestamp(
-    req.body,
-    signature,
-    process.env.WEBHOOK_SECRET,
-    timestamp,
-    {
-      format: '{timestamp}:{payload}',
-      algorithm: 'sha256',
-      encoding: 'hex',
-      tolerance: 300,
+    // req.body is a Buffer when using express.raw()
+    const isValid = hmac.verifyWithTimestamp(
+      req.body,
+      signature,
+      process.env.WEBHOOK_SECRET,
+      timestamp,
+      {
+        format: '{timestamp}:{payload}',
+        algorithm: 'sha256',
+        encoding: 'hex',
+        tolerance: 300,
+      }
+    );
+
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
     }
-  );
 
-  if (!isValid) {
-    return res.status(401).send('Invalid signature');
+    // Parse verified payload
+    const data = JSON.parse(req.body.toString());
+    // Process webhook...
   }
-
-  // Parse verified payload
-  const data = JSON.parse(req.body.toString());
-  // Process webhook...
-});
+);
 ```
 
 ### Custom Provider Example (Codehooks.io)
@@ -488,10 +570,10 @@ export default app.init();
 
 Some providers use verification patterns that don't fit this library's synchronous model:
 
-| Provider | Reason | Alternative |
-|----------|--------|-------------|
-| PayPal | Requires async certificate fetch and chain validation | Use [@paypal/paypal-server-sdk](https://www.npmjs.com/package/@paypal/paypal-server-sdk) |
-| AWS SNS | Requires async certificate fetch | Use [aws-sdk](https://www.npmjs.com/package/aws-sdk) |
+| Provider | Reason                                                | Alternative                                                                              |
+| -------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| PayPal   | Requires async certificate fetch and chain validation | Use [@paypal/paypal-server-sdk](https://www.npmjs.com/package/@paypal/paypal-server-sdk) |
+| AWS SNS  | Requires async certificate fetch                      | Use [aws-sdk](https://www.npmjs.com/package/aws-sdk)                                     |
 
 For these providers, we recommend using their official SDKs.
 
@@ -519,6 +601,7 @@ Learn more about webhook handling and verification:
 [Codehooks.io](https://codehooks.io) is a serverless backend platform purpose-built for webhook integrations and event-driven automations. Deploy complete webhook handlers in minutes with built-in infrastructure—no need to assemble separate services.
 
 **Complete Webhook Infrastructure:**
+
 - **Built-in database** - NoSQL document store for webhook events
 - **Key-value store** - Redis-like caching and state management
 - **Job queues** - Durable queues for async processing with automatic retries
@@ -526,6 +609,7 @@ Learn more about webhook handling and verification:
 - **Signature verification** - Native `req.rawBody` support for HMAC validation
 
 **Developer Experience:**
+
 - Instant deployment via CLI (`coho deploy`)
 - JavaScript/TypeScript with the `codehooks-js` library
 - Web-based Studio for code and data management
