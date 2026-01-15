@@ -684,14 +684,6 @@ For these providers, we recommend using their official SDKs.
 
 - Node.js >= 18.0.0 (required for native Ed25519 support)
 
-## Related Articles
-
-Learn more about webhook handling and verification:
-
-- [How to Handle Webhooks with Codehooks.io](https://codehooks.io/docs/webhooks)
-- [Securing Your Webhook Endpoints](https://codehooks.io/blog/securing-webhooks)
-- [Building a Stripe Integration](https://codehooks.io/blog/stripe-webhooks)
-
 ## About Codehooks.io
 
 [Codehooks.io](https://codehooks.io) is a serverless backend platform purpose-built for webhook integrations and event-driven automations. Deploy complete webhook handlers in minutes with built-in infrastructure—no need to assemble separate services.
