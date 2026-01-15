@@ -50,6 +50,7 @@ if (!isValid) {
 | Mailchimp | `X-Mailchimp-Signature`                  | HMAC-SHA256 (base64)    |
 | GitLab    | `X-Gitlab-Token`                         | Token comparison        |
 | Typeform  | `Typeform-Signature`                     | HMAC-SHA256 (base64)    |
+| Crystallize | `X-Crystallize-Signature`              | JWT + HMAC-SHA256       |
 
 ## API
 
@@ -370,6 +371,34 @@ app.post('/webhook/gitlab', express.json(), (req, res) => {
 });
 ```
 
+### Crystallize
+
+```typescript
+import { verify } from 'webhook-verify';
+
+app.post(
+  '/webhook/crystallize',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    // Crystallize requires the full URL for verification
+    const url = `https://${req.headers.host}${req.originalUrl}`;
+    const isValid = verify(
+      'crystallize',
+      req.body,
+      req.headers,
+      process.env.CRYSTALLIZE_SIGNATURE_SECRET,
+      { url }
+    );
+
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    // Process webhook...
+  }
+);
+```
+
 ## Codehooks.io Example
 
 ```typescript
@@ -415,6 +444,16 @@ Twilio requires the full webhook URL for verification:
 
 ```typescript
 verify('twilio', payload, signature, secret, {
+  url: 'https://example.com/webhook',
+});
+```
+
+### Crystallize URL
+
+Crystallize requires the full webhook URL for verification:
+
+```typescript
+verify('crystallize', payload, signature, secret, {
   url: 'https://example.com/webhook',
 });
 ```
