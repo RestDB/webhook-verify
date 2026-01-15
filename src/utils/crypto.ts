@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual, createVerify, createPublicKey } from 'node:crypto';
+import { createHmac, timingSafeEqual, createVerify, createPublicKey } from 'crypto';
 
 /**
  * Compute HMAC signature of a payload

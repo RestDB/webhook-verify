@@ -1,4 +1,4 @@
-import { createVerify, createPublicKey } from 'node:crypto';
+import { createVerify, createPublicKey } from 'crypto';
 import { isTimestampValid } from '../utils/crypto.js';
 import type { ProviderVerifier, TimestampOptions } from '../types.js';
 

@@ -17,7 +17,8 @@ export type Provider =
   | 'intercom'
   | 'mailchimp'
   | 'gitlab'
-  | 'typeform';
+  | 'typeform'
+  | 'crystallize';
 
 /**
  * Options for providers that support timestamp tolerance
@@ -40,9 +41,23 @@ export interface TwilioOptions {
 }
 
 /**
+ * Crystallize-specific options requiring URL and method
+ */
+export interface CrystallizeOptions {
+  /**
+   * The full URL of the webhook endpoint (required for Crystallize validation)
+   */
+  url: string;
+  /**
+   * The HTTP method (default: 'POST')
+   */
+  method?: string;
+}
+
+/**
  * Provider-specific verification options
  */
-export type VerifyOptions = TimestampOptions | TwilioOptions;
+export type VerifyOptions = TimestampOptions | TwilioOptions | CrystallizeOptions;
 
 /**
  * Internal interface for provider verification functions

@@ -169,6 +169,12 @@ const providerHeaders: Record<Provider, (headers: Headers) => SignatureData | nu
     if (!signature) return null;
     return { signature, rawSignature: signature };
   },
+
+  crystallize: (headers) => {
+    const signature = getHeader(headers, 'x-crystallize-signature');
+    if (!signature) return null;
+    return { signature, rawSignature: signature };
+  },
 };
 
 /**
@@ -245,6 +251,7 @@ export function getHeaderNames(provider: Provider): Record<string, string> {
     mailchimp: { signature: 'x-mailchimp-signature' },
     gitlab: { token: 'x-gitlab-token', event: 'x-gitlab-event' },
     typeform: { signature: 'typeform-signature' },
+    crystallize: { signature: 'x-crystallize-signature' },
   };
 
   return headerMap[provider];

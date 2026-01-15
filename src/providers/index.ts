@@ -1,4 +1,5 @@
 import { clerk } from './clerk.js';
+import { crystallize } from './crystallize.js';
 import { discord } from './discord.js';
 import { github } from './github.js';
 import { gitlab } from './gitlab.js';
@@ -22,6 +23,7 @@ import type { Provider, ProviderVerifier } from '../types.js';
  */
 export const providers: Record<Provider, ProviderVerifier> = {
   clerk,
+  crystallize,
   discord,
   github,
   gitlab,
@@ -41,6 +43,7 @@ export const providers: Record<Provider, ProviderVerifier> = {
 
 export {
   clerk,
+  crystallize,
   discord,
   github,
   gitlab,
