@@ -5,9 +5,23 @@
 [![Works with Codehooks.io](https://img.shields.io/badge/works%20with-codehooks.io-blue)](https://codehooks.io)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](https://www.npmjs.com/package/webhook-verify)
 
-Verify webhooks from popular services with zero dependencies. A unified API for webhook signature verification.
+**One API for all your webhooks.** Verify signatures from Stripe, GitHub, Shopify, Slack, and 13 other providers with a single, consistent interface.
 
-Built and maintained by [Codehooks.io](https://codehooks.io) - the serverless backend platform for webhook integrations and event-driven automations.
+```typescript
+// Same pattern for every provider
+verify('stripe', payload, headers, secret);
+verify('github', payload, headers, secret);
+verify('shopify', payload, headers, secret);
+```
+
+**Why use this?**
+
+- **Multi-provider apps** - Building a SaaS that receives webhooks from Stripe, GitHub, and Slack? Use one library instead of three.
+- **Zero dependencies** - Just Node.js crypto. No dependency tree to audit.
+- **Unified API** - Stop reading different docs for each provider's signature scheme. HMAC, Ed25519, RSA - it's all just `verify()`.
+- **Key rotation built-in** - Rotate secrets without downtime using `additionalSecrets`.
+
+Built and maintained by [Codehooks.io](https://codehooks.io) - the serverless backend platform for webhook integrations.
 
 ## Installation
 
