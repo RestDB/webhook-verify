@@ -109,13 +109,11 @@ import { app } from 'codehooks-js';
 import { verify } from 'webhook-verify';
 
 app.post('/webhook', async (req, res) => {
-  const signature = req.headers['x-signature'];
-
   // ✅ Use req.rawBody (the raw bytes)
-  const isValid = verify('github', req.rawBody, signature, secret);
+  const isValid = verify('github', req.rawBody, req.headers, secret);
 
   // ❌ Don't use req.body (parsed JSON)
-  // const isValid = verify('github', JSON.stringify(req.body), signature, secret);
+  // const isValid = verify('github', JSON.stringify(req.body), req.headers, secret);
 });
 
 export default app.init();
@@ -136,7 +134,7 @@ app.post('/webhook/stripe',
   express.raw({ type: 'application/json' }),
   (req, res) => {
     // req.body is a Buffer containing the raw bytes
-    const isValid = verify('stripe', req.body, req.headers['stripe-signature'], secret);
+    const isValid = verify('stripe', req.body, req.headers, secret);
   }
 );
 
