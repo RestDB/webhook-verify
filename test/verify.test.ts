@@ -22,6 +22,62 @@ describe('webhook-verify', () => {
     });
   });
 
+  describe('verify with headers', () => {
+    const secret = 'test-secret';
+    const payload = '{"test":"data"}';
+
+    it('should verify when passing headers object for GitHub', () => {
+      const sig = createHmac('sha256', secret).update(payload).digest('hex');
+      const headers = {
+        'x-hub-signature-256': `sha256=${sig}`,
+        'x-github-event': 'push',
+      };
+      assert.strictEqual(verify('github', payload, headers, secret), true);
+    });
+
+    it('should verify when passing headers object for Stripe', () => {
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signedPayload = `${timestamp}.${payload}`;
+      const sig = createHmac('sha256', secret).update(signedPayload).digest('hex');
+      const headers = {
+        'stripe-signature': `t=${timestamp},v1=${sig}`,
+      };
+      assert.strictEqual(verify('stripe', payload, headers, secret), true);
+    });
+
+    it('should verify when passing headers object for Slack', () => {
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const sigBasestring = `v0:${timestamp}:${payload}`;
+      const sig = createHmac('sha256', secret).update(sigBasestring).digest('hex');
+      const headers = {
+        'x-slack-signature': `v0=${sig}`,
+        'x-slack-request-timestamp': timestamp,
+      };
+      assert.strictEqual(verify('slack', payload, headers, secret), true);
+    });
+
+    it('should throw when required headers are missing', () => {
+      const headers = { 'content-type': 'application/json' };
+      assert.throws(
+        () => verify('stripe', payload, headers, secret),
+        /Missing required webhook signature header/
+      );
+    });
+
+    it('should throw with provider name in error message', () => {
+      const headers = {};
+      assert.throws(
+        () => verify('github', payload, headers, secret),
+        /Missing required webhook signature header\(s\) for github/
+      );
+    });
+
+    it('should still work with signature string (backwards compatible)', () => {
+      const sig = createHmac('sha256', secret).update(payload).digest('hex');
+      assert.strictEqual(verify('github', payload, `sha256=${sig}`, secret), true);
+    });
+  });
+
   describe('getSupportedProviders', () => {
     it('should return array of providers', () => {
       const providers = getSupportedProviders();

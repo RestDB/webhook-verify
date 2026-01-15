@@ -1,4 +1,6 @@
 import { providers } from './providers/index.js';
+import { getSignature, getHeaderNames } from './headers.js';
+import type { Headers } from './headers.js';
 import type { Provider, VerifyOptions } from './types.js';
 
 /**
@@ -6,26 +8,30 @@ import type { Provider, VerifyOptions } from './types.js';
  *
  * @param provider - The webhook provider name
  * @param payload - The raw request body (string or Buffer)
- * @param signature - The signature from the webhook header
+ * @param signatureOrHeaders - The signature string OR request headers object
  * @param secret - The webhook secret, API key, or public key
  * @param options - Provider-specific options (e.g., timestamp tolerance)
  * @returns true if the signature is valid, false otherwise
+ * @throws Error if headers object is passed but required signature headers are missing
  *
  * @example
  * ```typescript
  * import { verify } from 'webhook-verify';
  *
- * // Verify a Stripe webhook
- * const isValid = verify('stripe', body, signature, webhookSecret);
+ * // Pass headers directly (recommended)
+ * const isValid = verify('stripe', req.rawBody, req.headers, webhookSecret);
  *
- * // Verify with custom timestamp tolerance
- * const isValid = verify('stripe', body, signature, secret, { tolerance: 600 });
+ * // Or pass signature string manually
+ * const isValid = verify('stripe', body, signatureString, webhookSecret);
+ *
+ * // With custom timestamp tolerance
+ * const isValid = verify('stripe', body, req.headers, secret, { tolerance: 600 });
  * ```
  */
 export function verify(
   provider: Provider,
   payload: string | Buffer,
-  signature: string,
+  signatureOrHeaders: string | Headers,
   secret: string,
   options?: VerifyOptions
 ): boolean {
@@ -33,6 +39,22 @@ export function verify(
 
   if (!verifier) {
     throw new Error(`Unknown webhook provider: ${provider}`);
+  }
+
+  let signature: string;
+
+  if (typeof signatureOrHeaders === 'string') {
+    // Direct signature string
+    signature = signatureOrHeaders;
+  } else {
+    // Headers object - extract signature
+    const sigData = getSignature(provider, signatureOrHeaders);
+    if (!sigData) {
+      const headerNames = getHeaderNames(provider);
+      const required = Object.values(headerNames).join(', ');
+      throw new Error(`Missing required webhook signature header(s) for ${provider}: ${required}`);
+    }
+    signature = sigData.signature;
   }
 
   return verifier.verify(payload, signature, secret, options);

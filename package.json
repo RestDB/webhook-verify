@@ -1,6 +1,6 @@
 {
   "name": "webhook-verify",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Verify webhooks from popular services with zero dependencies",
   "type": "module",
   "main": "./dist/index.cjs",

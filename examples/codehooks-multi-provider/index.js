@@ -16,14 +16,11 @@ import { verify, getSignature } from 'webhook-verify';
 
 // Stripe webhooks
 app.post('/webhooks/stripe', async (req, res) => {
-  // Extracts: stripe-signature header
-  const sig = getSignature('stripe', req.headers);
-  if (!sig) {
-    return res.status(400).json({ error: 'Missing signature' });
-  }
+  // Pass headers directly - throws if signature header is missing
+  const isValid = verify('stripe', req.rawBody, req.headers, process.env.STRIPE_WEBHOOK_SECRET);
 
-  if (!verify('stripe', req.rawBody, sig.signature, process.env.STRIPE_WEBHOOK_SECRET)) {
-    return res.status(400).json({ error: 'Invalid signature' });
+  if (!isValid) {
+    return res.status(401).json({ error: 'Invalid signature' });
   }
 
   const event = JSON.parse(req.rawBody);
@@ -34,16 +31,15 @@ app.post('/webhooks/stripe', async (req, res) => {
 
 // GitHub webhooks
 app.post('/webhooks/github', async (req, res) => {
-  // Extracts: x-hub-signature-256, x-github-event headers
-  const sig = getSignature('github', req.headers);
-  if (!sig) {
-    return res.status(400).json({ error: 'Missing signature' });
-  }
+  // Pass headers directly - throws if signature header is missing
+  const isValid = verify('github', req.rawBody, req.headers, process.env.GITHUB_WEBHOOK_SECRET);
 
-  if (!verify('github', req.rawBody, sig.signature, process.env.GITHUB_WEBHOOK_SECRET)) {
+  if (!isValid) {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
+  // Use getSignature() if you need the event type
+  const sig = getSignature('github', req.headers);
   const payload = JSON.parse(req.rawBody);
   await logWebhook('github', sig.eventType, payload);
 
@@ -52,14 +48,10 @@ app.post('/webhooks/github', async (req, res) => {
 
 // Slack webhooks
 app.post('/webhooks/slack', async (req, res) => {
-  // Extracts: x-slack-signature, x-slack-request-timestamp headers
-  // Combines them automatically into the format verify() expects
-  const sig = getSignature('slack', req.headers);
-  if (!sig) {
-    return res.status(400).json({ error: 'Missing signature' });
-  }
+  // Pass headers directly - signature and timestamp handled automatically
+  const isValid = verify('slack', req.rawBody, req.headers, process.env.SLACK_SIGNING_SECRET);
 
-  if (!verify('slack', req.rawBody, sig.signature, process.env.SLACK_SIGNING_SECRET)) {
+  if (!isValid) {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 

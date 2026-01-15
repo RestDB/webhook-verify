@@ -8,23 +8,17 @@
  */
 
 import { app, Datastore } from 'codehooks-js';
-import { verify, getSignature } from 'webhook-verify';
+import { verify } from 'webhook-verify';
 
 // Stripe webhook endpoint
 app.post('/webhooks/stripe', async (req, res) => {
-  // Extracts: stripe-signature header
-  const sig = getSignature('stripe', req.headers);
-  if (!sig) {
-    console.error('Missing Stripe signature header');
-    return res.status(400).json({ error: 'Missing signature' });
-  }
+  // Pass headers directly - signature extracted automatically
+  // Throws if stripe-signature header is missing
+  const isValid = verify('stripe', req.rawBody, req.headers, process.env.STRIPE_WEBHOOK_SECRET);
 
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  // Verify the webhook signature using raw body
-  if (!verify('stripe', req.rawBody, sig.signature, secret)) {
+  if (!isValid) {
     console.error('Invalid Stripe signature');
-    return res.status(400).json({ error: 'Invalid signature' });
+    return res.status(401).json({ error: 'Invalid signature' });
   }
 
   // Parse the verified payload

@@ -12,21 +12,18 @@ import { verify, getSignature } from 'webhook-verify';
 
 // Shopify webhook endpoint
 app.post('/webhooks/shopify', async (req, res) => {
-  // Extracts: x-shopify-hmac-sha256, x-shopify-topic headers
-  const sig = getSignature('shopify', req.headers);
-  if (!sig) {
-    console.error('Missing Shopify signature header');
-    return res.status(400).json({ error: 'Missing signature' });
-  }
+  // Pass headers directly - signature extracted automatically
+  // Throws if x-shopify-hmac-sha256 header is missing
+  const isValid = verify('shopify', req.rawBody, req.headers, process.env.SHOPIFY_WEBHOOK_SECRET);
 
-  const shopDomain = req.headers['x-shopify-shop-domain'];
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
-
-  // Verify the webhook signature
-  if (!verify('shopify', req.rawBody, sig.signature, secret)) {
+  if (!isValid) {
     console.error('Invalid Shopify signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
+
+  // Use getSignature() to access topic (event type)
+  const sig = getSignature('shopify', req.headers);
+  const shopDomain = req.headers['x-shopify-shop-domain'];
 
   // Parse the verified payload
   const payload = JSON.parse(req.rawBody);

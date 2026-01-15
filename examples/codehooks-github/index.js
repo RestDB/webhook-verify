@@ -12,21 +12,18 @@ import { verify, getSignature } from 'webhook-verify';
 
 // GitHub webhook endpoint
 app.post('/webhooks/github', async (req, res) => {
-  // Extracts: x-hub-signature-256, x-github-event headers
-  const sig = getSignature('github', req.headers);
-  if (!sig) {
-    console.error('Missing GitHub signature header');
-    return res.status(400).json({ error: 'Missing signature' });
-  }
+  // Pass headers directly - signature extracted automatically
+  // Throws if x-hub-signature-256 header is missing
+  const isValid = verify('github', req.rawBody, req.headers, process.env.GITHUB_WEBHOOK_SECRET);
 
-  const deliveryId = req.headers['x-github-delivery'];
-  const secret = process.env.GITHUB_WEBHOOK_SECRET;
-
-  // Verify the webhook signature
-  if (!verify('github', req.rawBody, sig.signature, secret)) {
+  if (!isValid) {
     console.error('Invalid GitHub signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
+
+  // Use getSignature() to access event type and other metadata
+  const sig = getSignature('github', req.headers);
+  const deliveryId = req.headers['x-github-delivery'];
 
   // Parse the verified payload
   const payload = JSON.parse(req.rawBody);
