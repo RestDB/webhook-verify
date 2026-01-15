@@ -198,12 +198,14 @@ app.use(express.json());
 ### Stripe
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
-// Express example
 app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['stripe-signature'];
-  const isValid = verify('stripe', req.body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+  // Extracts: stripe-signature header
+  const sig = getSignature('stripe', req.headers);
+  if (!sig) return res.status(400).send('Missing signature');
+
+  const isValid = verify('stripe', req.body, sig.signature, process.env.STRIPE_WEBHOOK_SECRET);
 
   if (!isValid) {
     return res.status(400).send('Invalid signature');
@@ -217,16 +219,20 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
 ### GitHub
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/github', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-hub-signature-256'];
-  const isValid = verify('github', req.body, signature, process.env.GITHUB_WEBHOOK_SECRET);
+  // Extracts: x-hub-signature-256, x-github-event headers
+  const sig = getSignature('github', req.headers);
+  if (!sig) return res.status(400).send('Missing signature');
+
+  const isValid = verify('github', req.body, sig.signature, process.env.GITHUB_WEBHOOK_SECRET);
 
   if (!isValid) {
     return res.status(401).send('Invalid signature');
   }
 
+  console.log(`Event type: ${sig.eventType}`); // e.g., "push", "pull_request"
   // Process webhook...
 });
 ```
@@ -234,16 +240,20 @@ app.post('/webhook/github', express.raw({ type: 'application/json' }), (req, res
 ### Shopify
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/shopify', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-shopify-hmac-sha256'];
-  const isValid = verify('shopify', req.body, signature, process.env.SHOPIFY_WEBHOOK_SECRET);
+  // Extracts: x-shopify-hmac-sha256, x-shopify-topic headers
+  const sig = getSignature('shopify', req.headers);
+  if (!sig) return res.status(400).send('Missing signature');
+
+  const isValid = verify('shopify', req.body, sig.signature, process.env.SHOPIFY_WEBHOOK_SECRET);
 
   if (!isValid) {
     return res.status(401).send('Invalid signature');
   }
 
+  console.log(`Topic: ${sig.eventType}`); // e.g., "orders/create"
   // Process webhook...
 });
 ```
@@ -251,15 +261,15 @@ app.post('/webhook/shopify', express.raw({ type: 'application/json' }), (req, re
 ### Slack
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/slack', express.raw({ type: 'application/x-www-form-urlencoded' }), (req, res) => {
-  const signature = req.headers['x-slack-signature'];
-  const timestamp = req.headers['x-slack-request-timestamp'];
+  // Extracts: x-slack-signature, x-slack-request-timestamp headers
+  // Combines them automatically into the format verify() expects
+  const sig = getSignature('slack', req.headers);
+  if (!sig) return res.status(400).send('Missing signature');
 
-  // Combine signature and timestamp for verification
-  const combined = `${signature},t=${timestamp}`;
-  const isValid = verify('slack', req.body, combined, process.env.SLACK_SIGNING_SECRET);
+  const isValid = verify('slack', req.body, sig.signature, process.env.SLACK_SIGNING_SECRET);
 
   if (!isValid) {
     return res.status(401).send('Invalid signature');
@@ -272,14 +282,16 @@ app.post('/webhook/slack', express.raw({ type: 'application/x-www-form-urlencode
 ### Twilio
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/twilio', express.urlencoded({ extended: false }), (req, res) => {
-  const signature = req.headers['x-twilio-signature'];
-  const url = `https://${req.headers.host}${req.originalUrl}`;
+  // Extracts: x-twilio-signature header
+  const sig = getSignature('twilio', req.headers);
+  if (!sig) return res.status(400).send('Missing signature');
 
   // Twilio requires the full URL for verification
-  const isValid = verify('twilio', req.body, signature, process.env.TWILIO_AUTH_TOKEN, { url });
+  const url = `https://${req.headers.host}${req.originalUrl}`;
+  const isValid = verify('twilio', req.body, sig.signature, process.env.TWILIO_AUTH_TOKEN, { url });
 
   if (!isValid) {
     return res.status(401).send('Invalid signature');
@@ -292,14 +304,15 @@ app.post('/webhook/twilio', express.urlencoded({ extended: false }), (req, res) 
 ### Discord
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/discord', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-signature-ed25519'];
-  const timestamp = req.headers['x-signature-timestamp'];
+  // Extracts: x-signature-ed25519, x-signature-timestamp headers
+  // Combines them automatically for Ed25519 verification
+  const sig = getSignature('discord', req.headers);
+  if (!sig) return res.status(400).send('Missing signature');
 
-  const combined = `${signature},t=${timestamp}`;
-  const isValid = verify('discord', req.body, combined, process.env.DISCORD_PUBLIC_KEY);
+  const isValid = verify('discord', req.body, sig.signature, process.env.DISCORD_PUBLIC_KEY);
 
   if (!isValid) {
     return res.status(401).send('Invalid signature');
@@ -312,21 +325,21 @@ app.post('/webhook/discord', express.raw({ type: 'application/json' }), (req, re
 ### Svix / Clerk
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/clerk', express.raw({ type: 'application/json' }), (req, res) => {
-  const svixId = req.headers['svix-id'];
-  const svixTimestamp = req.headers['svix-timestamp'];
-  const svixSignature = req.headers['svix-signature'];
+  // Extracts: svix-signature, svix-timestamp, svix-id headers
+  // Combines them automatically into the format verify() expects
+  const sig = getSignature('clerk', req.headers);
+  if (!sig) return res.status(400).send('Missing signature');
 
-  // Combine headers for verification
-  const combined = `${svixSignature},t=${svixTimestamp},id=${svixId}`;
-  const isValid = verify('clerk', req.body, combined, process.env.CLERK_WEBHOOK_SECRET);
+  const isValid = verify('clerk', req.body, sig.signature, process.env.CLERK_WEBHOOK_SECRET);
 
   if (!isValid) {
     return res.status(401).send('Invalid signature');
   }
 
+  console.log(`Message ID: ${sig.messageId}`);
   // Process webhook...
 });
 ```
@@ -334,16 +347,20 @@ app.post('/webhook/clerk', express.raw({ type: 'application/json' }), (req, res)
 ### GitLab
 
 ```typescript
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/gitlab', express.json(), (req, res) => {
-  const token = req.headers['x-gitlab-token'];
-  const isValid = verify('gitlab', '', token, process.env.GITLAB_WEBHOOK_SECRET);
+  // Extracts: x-gitlab-token, x-gitlab-event headers
+  const sig = getSignature('gitlab', req.headers);
+  if (!sig) return res.status(400).send('Missing token');
+
+  const isValid = verify('gitlab', '', sig.signature, process.env.GITLAB_WEBHOOK_SECRET);
 
   if (!isValid) {
     return res.status(401).send('Invalid token');
   }
 
+  console.log(`Event: ${sig.eventType}`); // e.g., "Push Hook"
   // Process webhook...
 });
 ```
@@ -352,13 +369,17 @@ app.post('/webhook/gitlab', express.json(), (req, res) => {
 
 ```typescript
 import { app } from 'codehooks-js';
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 app.post('/webhook/stripe', async (req, res) => {
-  const signature = req.headers['stripe-signature'];
+  // Extracts: stripe-signature header
+  const sig = getSignature('stripe', req.headers);
+  if (!sig) {
+    return res.status(400).json({ error: 'Missing signature' });
+  }
 
   // Always use req.rawBody for signature verification
-  const isValid = verify('stripe', req.rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
+  const isValid = verify('stripe', req.rawBody, sig.signature, process.env.STRIPE_WEBHOOK_SECRET);
 
   if (!isValid) {
     return res.status(400).json({ error: 'Invalid signature' });
@@ -568,12 +589,20 @@ Learn more about webhook handling and verification:
 
 ## About Codehooks.io
 
-[Codehooks.io](https://codehooks.io) is a serverless backend platform that makes it easy to build and deploy APIs, webhooks, and scheduled jobs. Features include:
+[Codehooks.io](https://codehooks.io) is a serverless backend platform purpose-built for webhook integrations and event-driven automations. Deploy complete webhook handlers in minutes with built-in infrastructure—no need to assemble separate services.
 
-- **Instant deployment** - Deploy JavaScript/TypeScript backends in seconds
-- **Built-in database** - NoSQL datastore with no configuration needed
-- **Webhook handling** - First-class support for receiving and processing webhooks
-- **Zero infrastructure** - No servers to manage, scales automatically
+**Complete Webhook Infrastructure:**
+- **Built-in database** - NoSQL document store for webhook events
+- **Key-value store** - Redis-like caching and state management
+- **Job queues** - Durable queues for async processing with automatic retries
+- **Background workers** - Cron jobs and scheduled tasks
+- **Signature verification** - Native `req.rawBody` support for HMAC validation
+
+**Developer Experience:**
+- Instant deployment via CLI (`coho deploy`)
+- JavaScript/TypeScript with the `codehooks-js` library
+- Web-based Studio for code and data management
+- Flat-rate pricing with unlimited compute—no surprise bills
 
 [Get started for free](https://codehooks.io) | [Documentation](https://codehooks.io/docs) | [Examples](https://github.com/RestDB/webhook-verify/tree/main/examples)
 

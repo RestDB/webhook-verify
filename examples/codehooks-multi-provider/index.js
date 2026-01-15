@@ -12,13 +12,17 @@
  */
 
 import { app, Datastore } from 'codehooks-js';
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 // Stripe webhooks
 app.post('/webhooks/stripe', async (req, res) => {
-  const signature = req.headers['stripe-signature'];
+  // Extracts: stripe-signature header
+  const sig = getSignature('stripe', req.headers);
+  if (!sig) {
+    return res.status(400).json({ error: 'Missing signature' });
+  }
 
-  if (!verify('stripe', req.rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET)) {
+  if (!verify('stripe', req.rawBody, sig.signature, process.env.STRIPE_WEBHOOK_SECRET)) {
     return res.status(400).json({ error: 'Invalid signature' });
   }
 
@@ -30,28 +34,32 @@ app.post('/webhooks/stripe', async (req, res) => {
 
 // GitHub webhooks
 app.post('/webhooks/github', async (req, res) => {
-  const signature = req.headers['x-hub-signature-256'];
+  // Extracts: x-hub-signature-256, x-github-event headers
+  const sig = getSignature('github', req.headers);
+  if (!sig) {
+    return res.status(400).json({ error: 'Missing signature' });
+  }
 
-  if (!verify('github', req.rawBody, signature, process.env.GITHUB_WEBHOOK_SECRET)) {
+  if (!verify('github', req.rawBody, sig.signature, process.env.GITHUB_WEBHOOK_SECRET)) {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  const event = req.headers['x-github-event'];
   const payload = JSON.parse(req.rawBody);
-  await logWebhook('github', event, payload);
+  await logWebhook('github', sig.eventType, payload);
 
   res.json({ received: true });
 });
 
 // Slack webhooks
 app.post('/webhooks/slack', async (req, res) => {
-  const signature = req.headers['x-slack-signature'];
-  const timestamp = req.headers['x-slack-request-timestamp'];
+  // Extracts: x-slack-signature, x-slack-request-timestamp headers
+  // Combines them automatically into the format verify() expects
+  const sig = getSignature('slack', req.headers);
+  if (!sig) {
+    return res.status(400).json({ error: 'Missing signature' });
+  }
 
-  // Combine signature and timestamp for verification
-  const combined = `${signature},t=${timestamp}`;
-
-  if (!verify('slack', req.rawBody, combined, process.env.SLACK_SIGNING_SECRET)) {
+  if (!verify('slack', req.rawBody, sig.signature, process.env.SLACK_SIGNING_SECRET)) {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
@@ -85,7 +93,7 @@ app.get('/webhooks/recent', async (req, res) => {
   const webhooks = await conn.getMany('webhooks', {
     sort: { _id: -1 },
     limit: 20,
-  });
+  }).toArray();
   res.json(webhooks);
 });
 

@@ -8,36 +8,41 @@
  */
 
 import { app, Datastore } from 'codehooks-js';
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 // Shopify webhook endpoint
 app.post('/webhooks/shopify', async (req, res) => {
-  const signature = req.headers['x-shopify-hmac-sha256'];
-  const topic = req.headers['x-shopify-topic'];
+  // Extracts: x-shopify-hmac-sha256, x-shopify-topic headers
+  const sig = getSignature('shopify', req.headers);
+  if (!sig) {
+    console.error('Missing Shopify signature header');
+    return res.status(400).json({ error: 'Missing signature' });
+  }
+
   const shopDomain = req.headers['x-shopify-shop-domain'];
   const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
 
   // Verify the webhook signature
-  if (!verify('shopify', req.rawBody, signature, secret)) {
+  if (!verify('shopify', req.rawBody, sig.signature, secret)) {
     console.error('Invalid Shopify signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
   // Parse the verified payload
   const payload = JSON.parse(req.rawBody);
-  console.log(`Received Shopify webhook: ${topic} from ${shopDomain}`);
+  console.log(`Received Shopify webhook: ${sig.eventType} from ${shopDomain}`);
 
   // Store the event
   const conn = await Datastore.open();
   await conn.insertOne('shopify_events', {
-    topic,
+    topic: sig.eventType,
     shopDomain,
     payload,
     receivedAt: new Date().toISOString(),
   });
 
   // Handle specific topics
-  switch (topic) {
+  switch (sig.eventType) {
     case 'orders/create':
       console.log(`New order: ${payload.name} - $${payload.total_price}`);
       // Process new order
@@ -64,7 +69,7 @@ app.post('/webhooks/shopify', async (req, res) => {
       break;
 
     default:
-      console.log(`Unhandled topic: ${topic}`);
+      console.log(`Unhandled topic: ${sig.eventType}`);
   }
 
   res.json({ received: true });

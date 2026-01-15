@@ -8,30 +8,35 @@
  */
 
 import { app, Datastore } from 'codehooks-js';
-import { verify } from 'webhook-verify';
+import { verify, getSignature } from 'webhook-verify';
 
 // GitHub webhook endpoint
 app.post('/webhooks/github', async (req, res) => {
-  const signature = req.headers['x-hub-signature-256'];
-  const event = req.headers['x-github-event'];
+  // Extracts: x-hub-signature-256, x-github-event headers
+  const sig = getSignature('github', req.headers);
+  if (!sig) {
+    console.error('Missing GitHub signature header');
+    return res.status(400).json({ error: 'Missing signature' });
+  }
+
   const deliveryId = req.headers['x-github-delivery'];
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
   // Verify the webhook signature
-  if (!verify('github', req.rawBody, signature, secret)) {
+  if (!verify('github', req.rawBody, sig.signature, secret)) {
     console.error('Invalid GitHub signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
   // Parse the verified payload
   const payload = JSON.parse(req.rawBody);
-  console.log(`Received GitHub event: ${event} (${deliveryId})`);
+  console.log(`Received GitHub event: ${sig.eventType} (${deliveryId})`);
 
   // Store the event
   const conn = await Datastore.open();
   await conn.insertOne('github_events', {
     deliveryId,
-    event,
+    event: sig.eventType,
     action: payload.action,
     repository: payload.repository?.full_name,
     sender: payload.sender?.login,
@@ -39,7 +44,7 @@ app.post('/webhooks/github', async (req, res) => {
   });
 
   // Handle specific events
-  switch (event) {
+  switch (sig.eventType) {
     case 'push':
       console.log(`Push to ${payload.ref} by ${payload.pusher?.name}`);
       console.log(`Commits: ${payload.commits?.length || 0}`);
@@ -58,10 +63,10 @@ app.post('/webhooks/github', async (req, res) => {
       break;
 
     default:
-      console.log(`Unhandled event: ${event}`);
+      console.log(`Unhandled event: ${sig.eventType}`);
   }
 
-  res.json({ received: true, event, deliveryId });
+  res.json({ received: true, event: sig.eventType, deliveryId });
 });
 
 export default app.init();

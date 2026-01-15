@@ -57,6 +57,12 @@ describe('webhook-verify', () => {
       assert.strictEqual(verify('github', payload, signature, secret), true);
     });
 
+    it('should verify valid signature with Buffer payload', () => {
+      const bufferPayload = Buffer.from(payload, 'utf8');
+      const signature = generateGitHubSignature(payload, secret);
+      assert.strictEqual(verify('github', bufferPayload, signature, secret), true);
+    });
+
     it('should verify valid signature without prefix', () => {
       const sig = createHmac('sha256', secret).update(payload).digest('hex');
       assert.strictEqual(verify('github', payload, sig, secret), true);
@@ -104,6 +110,12 @@ describe('webhook-verify', () => {
     it('should verify valid signature', () => {
       const signature = generateStripeSignature(payload, secret);
       assert.strictEqual(verify('stripe', payload, signature, secret), true);
+    });
+
+    it('should verify valid signature with Buffer payload', () => {
+      const bufferPayload = Buffer.from(payload, 'utf8');
+      const signature = generateStripeSignature(payload, secret);
+      assert.strictEqual(verify('stripe', bufferPayload, signature, secret), true);
     });
 
     it('should reject invalid signature', () => {
