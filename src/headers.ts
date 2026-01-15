@@ -175,6 +175,42 @@ const providerHeaders: Record<Provider, (headers: Headers) => SignatureData | nu
     if (!signature) return null;
     return { signature, rawSignature: signature };
   },
+
+  zendesk: (headers) => {
+    const signature = getHeader(headers, 'x-zendesk-webhook-signature');
+    const timestamp = getHeader(headers, 'x-zendesk-webhook-signature-timestamp');
+    if (!signature || !timestamp) return null;
+    // Format for verify(): "signature,t=timestamp"
+    return {
+      signature: `${signature},t=${timestamp}`,
+      rawSignature: signature,
+      timestamp,
+    };
+  },
+
+  square: (headers) => {
+    const signature = getHeader(headers, 'x-square-hmacsha256-signature');
+    if (!signature) return null;
+    return { signature, rawSignature: signature };
+  },
+
+  hubspot: (headers) => {
+    const signature = getHeader(headers, 'x-hubspot-signature-v3');
+    const timestamp = getHeader(headers, 'x-hubspot-request-timestamp');
+    if (!signature || !timestamp) return null;
+    // Format for verify(): "signature,t=timestamp"
+    return {
+      signature: `${signature},t=${timestamp}`,
+      rawSignature: signature,
+      timestamp,
+    };
+  },
+
+  segment: (headers) => {
+    const signature = getHeader(headers, 'x-signature');
+    if (!signature) return null;
+    return { signature, rawSignature: signature };
+  },
 };
 
 /**
@@ -252,6 +288,10 @@ export function getHeaderNames(provider: Provider): Record<string, string> {
     gitlab: { token: 'x-gitlab-token', event: 'x-gitlab-event' },
     typeform: { signature: 'typeform-signature' },
     crystallize: { signature: 'x-crystallize-signature' },
+    zendesk: { signature: 'x-zendesk-webhook-signature', timestamp: 'x-zendesk-webhook-signature-timestamp' },
+    square: { signature: 'x-square-hmacsha256-signature' },
+    hubspot: { signature: 'x-hubspot-signature-v3', timestamp: 'x-hubspot-request-timestamp' },
+    segment: { signature: 'x-signature' },
   };
 
   return headerMap[provider];

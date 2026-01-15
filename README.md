@@ -5,7 +5,7 @@
 [![Works with Codehooks.io](https://img.shields.io/badge/works%20with-codehooks.io-blue)](https://codehooks.io)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](https://www.npmjs.com/package/webhook-verify)
 
-**One API for all your webhooks.** Verify signatures from Stripe, GitHub, Shopify, Slack, and 13 other providers with a single, consistent interface.
+**One API for all your webhooks.** Verify signatures from Stripe, GitHub, Shopify, Slack, and 17 other providers with a single, consistent interface.
 
 ```typescript
 // Same pattern for every provider
@@ -65,6 +65,10 @@ if (!isValid) {
 | GitLab    | `X-Gitlab-Token`                         | Token comparison        |
 | Typeform  | `Typeform-Signature`                     | HMAC-SHA256 (base64)    |
 | Crystallize | `X-Crystallize-Signature`              | JWT + HMAC-SHA256       |
+| Zendesk   | `X-Zendesk-Webhook-Signature`            | HMAC-SHA256 + timestamp |
+| Square    | `x-square-hmacsha256-signature`          | HMAC-SHA256             |
+| HubSpot   | `X-HubSpot-Signature-V3`                 | HMAC-SHA256 + timestamp |
+| Segment   | `X-Signature`                            | HMAC-SHA1               |
 
 ## API
 
@@ -490,6 +494,27 @@ verify('crystallize', payload, signature, secret, {
 });
 ```
 
+### Square URL
+
+Square requires the full webhook URL for verification:
+
+```typescript
+verify('square', payload, signature, secret, {
+  url: 'https://example.com/webhook',
+});
+```
+
+### HubSpot URL
+
+HubSpot (v3) requires the full webhook URL and optionally the HTTP method:
+
+```typescript
+verify('hubspot', payload, signature, secret, {
+  url: 'https://example.com/webhook',
+  method: 'POST', // optional, defaults to 'POST'
+});
+```
+
 ## Generic Algorithm Handlers
 
 For providers not explicitly supported, or for custom verification logic, use the generic handlers:
@@ -737,14 +762,12 @@ npm run build
 
 ### Providers We'd Like to Add
 
-- Hubspot
-- Zendesk
-- Square
 - Braintree
-- Plaid
-- Segment
 - Customer.io
 - Postmark
+- Adyen
+- Coinbase
+- DocuSign
 - ...and many more!
 
 Check the [issues](https://github.com/RestDB/webhook-verify/issues) for provider requests or open one for a provider you'd like to see supported.

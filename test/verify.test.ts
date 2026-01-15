@@ -490,6 +490,122 @@ describe('webhook-verify', () => {
     });
   });
 
+  describe('Zendesk', () => {
+    const secret = 'test-secret';
+    const payload = '{"type":"ticket.created"}';
+
+    function generateZendeskSignature(body: string, key: string, timestamp?: number): string {
+      const ts = timestamp ?? Math.floor(Date.now() / 1000);
+      const signedPayload = ts + body;
+      const sig = createHmac('sha256', key).update(signedPayload).digest('base64');
+      return `${sig},t=${ts}`;
+    }
+
+    it('should verify valid signature', () => {
+      const signature = generateZendeskSignature(payload, secret);
+      assert.strictEqual(verify('zendesk', payload, signature, secret), true);
+    });
+
+    it('should reject invalid signature', () => {
+      const ts = Math.floor(Date.now() / 1000);
+      assert.strictEqual(verify('zendesk', payload, `invalid,t=${ts}`, secret), false);
+    });
+
+    it('should reject expired timestamp', () => {
+      const oldTimestamp = Math.floor(Date.now() / 1000) - 600;
+      const signature = generateZendeskSignature(payload, secret, oldTimestamp);
+      assert.strictEqual(verify('zendesk', payload, signature, secret), false);
+    });
+  });
+
+  describe('Square', () => {
+    const secret = 'test-signature-key';
+    const url = 'https://example.com/webhook/square';
+    const payload = '{"type":"payment.completed"}';
+
+    function generateSquareSignature(reqUrl: string, body: string, key: string): string {
+      const signedPayload = reqUrl + body;
+      return createHmac('sha256', key).update(signedPayload).digest('base64');
+    }
+
+    it('should verify valid signature', () => {
+      const signature = generateSquareSignature(url, payload, secret);
+      assert.strictEqual(verify('square', payload, signature, secret, { url }), true);
+    });
+
+    it('should reject without url option', () => {
+      const signature = generateSquareSignature(url, payload, secret);
+      assert.strictEqual(verify('square', payload, signature, secret), false);
+    });
+
+    it('should reject invalid signature', () => {
+      assert.strictEqual(verify('square', payload, 'invalid', secret, { url }), false);
+    });
+  });
+
+  describe('HubSpot', () => {
+    const secret = 'test-client-secret';
+    const url = 'https://example.com/webhook/hubspot';
+    const payload = '{"eventType":"contact.creation"}';
+
+    function generateHubSpotSignature(
+      method: string,
+      reqUrl: string,
+      body: string,
+      key: string,
+      timestamp?: number
+    ): string {
+      const ts = timestamp ?? Date.now();
+      const signedPayload = method + reqUrl + body + ts;
+      const sig = createHmac('sha256', key).update(signedPayload).digest('base64');
+      return `${sig},t=${ts}`;
+    }
+
+    it('should verify valid signature', () => {
+      const signature = generateHubSpotSignature('POST', url, payload, secret);
+      assert.strictEqual(verify('hubspot', payload, signature, secret, { url }), true);
+    });
+
+    it('should verify with custom method', () => {
+      const signature = generateHubSpotSignature('PUT', url, payload, secret);
+      assert.strictEqual(verify('hubspot', payload, signature, secret, { url, method: 'PUT' }), true);
+    });
+
+    it('should reject without url option', () => {
+      const signature = generateHubSpotSignature('POST', url, payload, secret);
+      assert.strictEqual(verify('hubspot', payload, signature, secret), false);
+    });
+
+    it('should reject expired timestamp', () => {
+      const oldTimestamp = Date.now() - 600000; // 10 minutes ago in ms
+      const signature = generateHubSpotSignature('POST', url, payload, secret, oldTimestamp);
+      assert.strictEqual(verify('hubspot', payload, signature, secret, { url }), false);
+    });
+  });
+
+  describe('Segment', () => {
+    const secret = 'test-shared-secret';
+    const payload = '{"type":"track","event":"Order Completed"}';
+
+    function generateSegmentSignature(body: string, key: string): string {
+      return createHmac('sha1', key).update(body).digest('hex');
+    }
+
+    it('should verify valid signature', () => {
+      const signature = generateSegmentSignature(payload, secret);
+      assert.strictEqual(verify('segment', payload, signature, secret), true);
+    });
+
+    it('should reject invalid signature', () => {
+      assert.strictEqual(verify('segment', payload, 'invalid', secret), false);
+    });
+
+    it('should verify with uppercase signature', () => {
+      const signature = generateSegmentSignature(payload, secret).toUpperCase();
+      assert.strictEqual(verify('segment', payload, signature, secret), true);
+    });
+  });
+
   describe('Generic Handlers', () => {
     describe('hmac.verify', () => {
       const secret = 'test-secret';

@@ -18,7 +18,11 @@ export type Provider =
   | 'mailchimp'
   | 'gitlab'
   | 'typeform'
-  | 'crystallize';
+  | 'crystallize'
+  | 'zendesk'
+  | 'square'
+  | 'hubspot'
+  | 'segment';
 
 /**
  * Base options available to all providers
@@ -67,9 +71,37 @@ export interface CrystallizeOptions extends BaseOptions {
 }
 
 /**
+ * Square-specific options requiring the request URL
+ */
+export interface SquareOptions extends BaseOptions {
+  /**
+   * The full URL of the webhook endpoint (required for Square validation)
+   */
+  url: string;
+}
+
+/**
+ * HubSpot-specific options requiring URL and method
+ */
+export interface HubSpotOptions extends BaseOptions {
+  /**
+   * The full URL of the webhook endpoint (required for HubSpot v3 validation)
+   */
+  url: string;
+  /**
+   * The HTTP method (default: 'POST')
+   */
+  method?: string;
+  /**
+   * Maximum age of the webhook in seconds (default: 300 = 5 minutes)
+   */
+  tolerance?: number;
+}
+
+/**
  * Provider-specific verification options
  */
-export type VerifyOptions = BaseOptions | TimestampOptions | TwilioOptions | CrystallizeOptions;
+export type VerifyOptions = BaseOptions | TimestampOptions | TwilioOptions | CrystallizeOptions | SquareOptions | HubSpotOptions;
 
 /**
  * Internal interface for provider verification functions

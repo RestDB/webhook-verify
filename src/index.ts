@@ -95,7 +95,7 @@ export function isProviderSupported(provider: string): provider is Provider {
 }
 
 // Re-export types
-export type { Provider, VerifyOptions, BaseOptions, TimestampOptions, TwilioOptions, CrystallizeOptions } from './types.js';
+export type { Provider, VerifyOptions, BaseOptions, TimestampOptions, TwilioOptions, CrystallizeOptions, SquareOptions, HubSpotOptions } from './types.js';
 
 // Re-export individual providers for direct access
 export * from './providers/index.js';
