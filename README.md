@@ -530,7 +530,7 @@ Learn more about webhook handling and verification:
 - **Webhook handling** - First-class support for receiving and processing webhooks
 - **Zero infrastructure** - No servers to manage, scales automatically
 
-[Get started for free](https://codehooks.io) | [Documentation](https://codehooks.io/docs) | [Examples](https://github.com/nicedoc/webhook-verify/tree/main/examples)
+[Get started for free](https://codehooks.io) | [Documentation](https://codehooks.io/docs) | [Examples](https://github.com/RestDB/webhook-verify/tree/main/examples)
 
 ## License
 

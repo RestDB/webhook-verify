@@ -34,13 +34,13 @@
     "twilio"
   ],
   "author": "Codehooks.io <support@codehooks.io> (https://codehooks.io)",
-  "homepage": "https://github.com/nicedoc/webhook-verify",
+  "homepage": "https://github.com/RestDB/webhook-verify",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nicedoc/webhook-verify.git"
+    "url": "https://github.com/RestDB/webhook-verify.git"
   },
   "bugs": {
-    "url": "https://github.com/nicedoc/webhook-verify/issues"
+    "url": "https://github.com/RestDB/webhook-verify/issues"
   },
   "funding": {
     "type": "individual",
