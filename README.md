@@ -63,6 +63,7 @@ if (!isValid) {
 | Intercom  | `X-Hub-Signature`                        | HMAC-SHA1               |
 | Mailchimp | `X-Mailchimp-Signature`                  | HMAC-SHA256 (base64)    |
 | GitLab    | `X-Gitlab-Token`                         | Token comparison        |
+| Home Assistant | `X-HA-Secret`                       | Token comparison        |
 | Typeform  | `Typeform-Signature`                     | HMAC-SHA256 (base64)    |
 | Crystallize | `X-Crystallize-Signature`              | JWT + HMAC-SHA256       |
 | Zendesk   | `X-Zendesk-Webhook-Signature`            | HMAC-SHA256 + timestamp |
@@ -387,6 +388,42 @@ app.post('/webhook/gitlab', express.json(), (req, res) => {
   const event = req.headers['x-gitlab-event']; // e.g., "Push Hook"
   // Process webhook...
 });
+```
+
+### Home Assistant
+
+```typescript
+import { verify } from 'webhook-verify';
+
+app.post('/webhook/homeassistant', express.json(), (req, res) => {
+  // Home Assistant uses token comparison via X-HA-Secret header
+  const isValid = verify(
+    'homeassistant',
+    '',
+    req.headers,
+    process.env.HA_SHARED_SECRET
+  );
+
+  if (!isValid) {
+    return res.status(401).send('Invalid token');
+  }
+
+  const { entity_id, state } = req.body;
+  // Process Home Assistant event...
+});
+```
+
+Home Assistant configuration example:
+
+```yaml
+rest_command:
+  send_event:
+    url: "https://your-webhook-url.com/ha/event"
+    method: POST
+    headers:
+      X-HA-Secret: !secret webhook_secret
+    content_type: "application/json"
+    payload: '{"entity_id": "{{ entity_id }}", "state": "{{ state }}"}'
 ```
 
 ### Crystallize

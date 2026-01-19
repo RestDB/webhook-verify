@@ -3,6 +3,7 @@ import { crystallize } from './crystallize.js';
 import { discord } from './discord.js';
 import { github } from './github.js';
 import { gitlab } from './gitlab.js';
+import { homeassistant } from './homeassistant.js';
 import { hubspot } from './hubspot.js';
 import { intercom } from './intercom.js';
 import { linear } from './linear.js';
@@ -31,6 +32,7 @@ export const providers: Record<Provider, ProviderVerifier> = {
   discord,
   github,
   gitlab,
+  homeassistant,
   hubspot,
   intercom,
   linear,
@@ -55,6 +57,7 @@ export {
   discord,
   github,
   gitlab,
+  homeassistant,
   hubspot,
   intercom,
   linear,

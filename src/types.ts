@@ -22,7 +22,8 @@ export type Provider =
   | 'zendesk'
   | 'square'
   | 'hubspot'
-  | 'segment';
+  | 'segment'
+  | 'homeassistant';
 
 /**
  * Base options available to all providers
