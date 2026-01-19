@@ -164,6 +164,12 @@ const providerHeaders: Record<Provider, (headers: Headers) => SignatureData | nu
     return { signature: token, rawSignature: token, eventType: event };
   },
 
+  homeassistant: (headers) => {
+    const token = getHeader(headers, 'x-ha-secret');
+    if (!token) return null;
+    return { signature: token, rawSignature: token };
+  },
+
   typeform: (headers) => {
     const signature = getHeader(headers, 'typeform-signature');
     if (!signature) return null;
@@ -286,6 +292,7 @@ export function getHeaderNames(provider: Provider): Record<string, string> {
     intercom: { signature: 'x-hub-signature' },
     mailchimp: { signature: 'x-mailchimp-signature' },
     gitlab: { token: 'x-gitlab-token', event: 'x-gitlab-event' },
+    homeassistant: { token: 'x-ha-secret' },
     typeform: { signature: 'typeform-signature' },
     crystallize: { signature: 'x-crystallize-signature' },
     zendesk: { signature: 'x-zendesk-webhook-signature', timestamp: 'x-zendesk-webhook-signature-timestamp' },
