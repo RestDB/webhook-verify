@@ -212,6 +212,22 @@ const providerHeaders: Record<Provider, (headers: Headers) => SignatureData | nu
     };
   },
 
+  vipps: (headers) => {
+    const authorization = getHeader(headers, 'authorization');
+    const date = getHeader(headers, 'x-ms-date');
+    const contentHash = getHeader(headers, 'x-ms-content-sha256');
+    if (!authorization || !date || !contentHash) return null;
+    // Authorization: HMAC-SHA256 SignedHeaders=...&Signature=<base64>
+    const signature = /Signature=([^&\s]+)/.exec(authorization)?.[1];
+    if (!signature) return null;
+    // Pipe-delimited: the RFC1123 date contains a comma
+    return {
+      signature: `${signature}|t=${date}|c=${contentHash}`,
+      rawSignature: authorization,
+      timestamp: date,
+    };
+  },
+
   segment: (headers) => {
     const signature = getHeader(headers, 'x-signature');
     if (!signature) return null;
@@ -299,6 +315,7 @@ export function getHeaderNames(provider: Provider): Record<string, string> {
     square: { signature: 'x-square-hmacsha256-signature' },
     hubspot: { signature: 'x-hubspot-signature-v3', timestamp: 'x-hubspot-request-timestamp' },
     segment: { signature: 'x-signature' },
+    vipps: { signature: 'authorization', timestamp: 'x-ms-date', contentHash: 'x-ms-content-sha256' },
   };
 
   return headerMap[provider];

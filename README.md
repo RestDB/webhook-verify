@@ -5,7 +5,7 @@
 [![Works with Codehooks.io](https://img.shields.io/badge/works%20with-codehooks.io-blue)](https://codehooks.io)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](https://www.npmjs.com/package/webhook-verify)
 
-**One API for all your webhooks.** Verify signatures from Stripe, GitHub, Shopify, Slack, and 17 other providers with a single, consistent interface.
+**One API for all your webhooks.** Verify signatures from Stripe, GitHub, Shopify, Slack, and 18 other providers with a single, consistent interface.
 
 ```typescript
 // Same pattern for every provider
@@ -70,6 +70,7 @@ if (!isValid) {
 | Square    | `x-square-hmacsha256-signature`          | HMAC-SHA256             |
 | HubSpot   | `X-HubSpot-Signature-V3`                 | HMAC-SHA256 + timestamp |
 | Segment   | `X-Signature`                            | HMAC-SHA1               |
+| Vipps     | `Authorization` (Azure APIM)             | HMAC-SHA256 + timestamp |
 
 ## API
 
@@ -426,6 +427,35 @@ rest_command:
     payload: '{"entity_id": "{{ entity_id }}", "state": "{{ state }}"}'
 ```
 
+### Vipps MobilePay
+
+Vipps uses the Azure API Management scheme: the `Authorization` header carries
+the signature, and the signed string covers the HTTP method, path, date, host
+and a SHA-256 hash of the body. Pass the URL you registered with Vipps — host
+and path are taken from it, so a proxy rewriting `Host` cannot break
+verification.
+
+```typescript
+app.post('/api/vipps/webhooks', async (req, res) => {
+  const isValid = verify('vipps', req.rawBody, req.headers, process.env.VIPPS_WEBHOOK_SECRET, {
+    url: 'https://api.example.com/api/vipps/webhooks',
+  });
+
+  if (!isValid) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  const event = JSON.parse(req.rawBody);
+  // event.name e.g. 'recurring.agreement-stopped.v1'
+  res.status(200).end();
+});
+```
+
+The body hash in `x-ms-content-sha256` is checked against the bytes you received
+before the signature is verified. The signature covers a hash of the body rather
+than the body itself, so without that check a swapped payload carrying a valid
+signature would pass.
+
 ### Crystallize
 
 ```typescript
@@ -549,6 +579,19 @@ HubSpot (v3) requires the full webhook URL and optionally the HTTP method:
 verify('hubspot', payload, signature, secret, {
   url: 'https://example.com/webhook',
   method: 'POST', // optional, defaults to 'POST'
+});
+```
+
+### Vipps URL
+
+Vipps requires the registered webhook URL, and optionally the method and a
+timestamp tolerance:
+
+```typescript
+verify('vipps', payload, signature, secret, {
+  url: 'https://api.example.com/api/vipps/webhooks',
+  method: 'POST',  // optional, defaults to 'POST'
+  tolerance: 300,  // optional, seconds, defaults to 300
 });
 ```
 
