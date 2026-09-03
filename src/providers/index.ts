@@ -18,6 +18,7 @@ import { stripe } from './stripe.js';
 import { svix } from './svix.js';
 import { twilio } from './twilio.js';
 import { typeform } from './typeform.js';
+import { vipps } from './vipps.js';
 import { vercel } from './vercel.js';
 import { zendesk } from './zendesk.js';
 
@@ -48,6 +49,7 @@ export const providers: Record<Provider, ProviderVerifier> = {
   twilio,
   typeform,
   vercel,
+  vipps,
   zendesk,
 };
 
@@ -73,5 +75,6 @@ export {
   twilio,
   typeform,
   vercel,
+  vipps,
   zendesk,
 };

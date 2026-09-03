@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import {
   verify,
   getSupportedProviders,
@@ -580,6 +580,139 @@ describe('webhook-verify', () => {
       const oldTimestamp = Date.now() - 600000; // 10 minutes ago in ms
       const signature = generateHubSpotSignature('POST', url, payload, secret, oldTimestamp);
       assert.strictEqual(verify('hubspot', payload, signature, secret, { url }), false);
+    });
+  });
+
+  describe('Vipps MobilePay', () => {
+    const secret = 'test-webhook-secret';
+    const url = 'https://api.example.com/api/vipps/webhooks';
+    const payload = '{"name":"recurring.agreement-stopped.v1"}';
+
+    function contentHash(body: string): string {
+      return createHash('sha256').update(body).digest('base64');
+    }
+
+    function sign(
+      body: string,
+      key: string,
+      opts: { date?: string; method?: string; host?: string; path?: string; hash?: string } = {}
+    ): { signature: string; date: string; hash: string } {
+      const date = opts.date ?? new Date().toUTCString();
+      const hash = opts.hash ?? contentHash(body);
+      const host = opts.host ?? 'api.example.com';
+      const path = opts.path ?? '/api/vipps/webhooks';
+      const method = opts.method ?? 'POST';
+      const signedString = `${method}\n${path}\n${date};${host};${hash}`;
+      const sig = createHmac('sha256', key).update(signedString).digest('base64');
+      return { signature: `${sig}|t=${date}|c=${hash}`, date, hash };
+    }
+
+    it('should verify a valid signature', () => {
+      const { signature } = sign(payload, secret);
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url }), true);
+    });
+
+    it('should verify from a headers object', () => {
+      const date = new Date().toUTCString();
+      const hash = contentHash(payload);
+      const signedString = `POST\n/api/vipps/webhooks\n${date};api.example.com;${hash}`;
+      const sig = createHmac('sha256', secret).update(signedString).digest('base64');
+      const headers = {
+        authorization: `HMAC-SHA256 SignedHeaders=x-ms-date;host;x-ms-content-sha256&Signature=${sig}`,
+        'x-ms-date': date,
+        'x-ms-content-sha256': hash,
+      };
+      assert.strictEqual(verify('vipps', payload, headers, secret, { url }), true);
+    });
+
+    it('should reject a tampered body that carries a valid signature', () => {
+      // The signature covers a hash of the body, not the body. Without the
+      // content-hash check this swap would verify.
+      const { signature } = sign(payload, secret);
+      const tampered = '{"name":"recurring.charge.captured"}';
+      assert.strictEqual(verify('vipps', tampered, signature, secret, { url }), false);
+    });
+
+    it('should reject a content hash that does not match the body', () => {
+      const { signature } = sign(payload, secret, { hash: contentHash('something else') });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url }), false);
+    });
+
+    it('should reject without url option', () => {
+      const { signature } = sign(payload, secret);
+      assert.strictEqual(verify('vipps', payload, signature, secret), false);
+    });
+
+    it('should reject an invalid signature', () => {
+      const date = new Date().toUTCString();
+      const sig = `invalid|t=${date}|c=${contentHash(payload)}`;
+      assert.strictEqual(verify('vipps', payload, sig, secret, { url }), false);
+    });
+
+    it('should reject a stale x-ms-date', () => {
+      const old = new Date(Date.now() - 600_000).toUTCString();
+      const { signature } = sign(payload, secret, { date: old });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url }), false);
+    });
+
+    it('should accept a stale date within a raised tolerance', () => {
+      const old = new Date(Date.now() - 600_000).toUTCString();
+      const { signature } = sign(payload, secret, { date: old });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url, tolerance: 900 }), true);
+    });
+
+    it('should reject an unparseable date', () => {
+      const { signature } = sign(payload, secret, { date: 'not-a-date' });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url }), false);
+    });
+
+    it('should reject when signed for a different path', () => {
+      const { signature } = sign(payload, secret, { path: '/api/other/webhooks' });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url }), false);
+    });
+
+    it('should reject when signed for a different host', () => {
+      const { signature } = sign(payload, secret, { host: 'evil.example.com' });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url }), false);
+    });
+
+    it('should verify with a custom method', () => {
+      const { signature } = sign(payload, secret, { method: 'PUT' });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url, method: 'PUT' }), true);
+    });
+
+    it('should include the query string in the signed path', () => {
+      const withQuery = 'https://api.example.com/api/vipps/webhooks?x=1';
+      const { signature } = sign(payload, secret, { path: '/api/vipps/webhooks?x=1' });
+      assert.strictEqual(verify('vipps', payload, signature, secret, { url: withQuery }), true);
+    });
+
+    it('should tolerate the full Authorization value as the signature', () => {
+      const date = new Date().toUTCString();
+      const hash = contentHash(payload);
+      const signedString = `POST\n/api/vipps/webhooks\n${date};api.example.com;${hash}`;
+      const sig = createHmac('sha256', secret).update(signedString).digest('base64');
+      const full = `HMAC-SHA256 SignedHeaders=x-ms-date;host;x-ms-content-sha256&Signature=${sig}|t=${date}|c=${hash}`;
+      assert.strictEqual(verify('vipps', payload, full, secret, { url }), true);
+    });
+
+    it('should support secret rotation via additionalSecrets', () => {
+      const { signature } = sign(payload, 'old-secret');
+      assert.strictEqual(
+        verify('vipps', payload, signature, 'new-secret', { url, additionalSecrets: ['old-secret'] }),
+        true
+      );
+    });
+
+    it('should throw when signature headers are missing', () => {
+      assert.throws(() => verify('vipps', payload, { 'x-ms-date': 'x' }, secret, { url }));
+    });
+
+    it('should return Vipps header names', () => {
+      const names = getHeaderNames('vipps');
+      assert.strictEqual(names.signature, 'authorization');
+      assert.strictEqual(names.timestamp, 'x-ms-date');
+      assert.strictEqual(names.contentHash, 'x-ms-content-sha256');
     });
   });
 

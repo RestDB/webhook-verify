@@ -23,7 +23,8 @@ export type Provider =
   | 'square'
   | 'hubspot'
   | 'segment'
-  | 'homeassistant';
+  | 'homeassistant'
+  | 'vipps';
 
 /**
  * Base options available to all providers
@@ -100,9 +101,28 @@ export interface HubSpotOptions extends BaseOptions {
 }
 
 /**
+ * Vipps MobilePay-specific options requiring the registered webhook URL
+ */
+export interface VippsOptions extends BaseOptions {
+  /**
+   * The full URL of the webhook endpoint as registered with Vipps
+   * (required: host and path-and-query are taken from it)
+   */
+  url: string;
+  /**
+   * The HTTP method (default: 'POST')
+   */
+  method?: string;
+  /**
+   * Maximum age of the webhook in seconds (default: 300 = 5 minutes)
+   */
+  tolerance?: number;
+}
+
+/**
  * Provider-specific verification options
  */
-export type VerifyOptions = BaseOptions | TimestampOptions | TwilioOptions | CrystallizeOptions | SquareOptions | HubSpotOptions;
+export type VerifyOptions = BaseOptions | TimestampOptions | TwilioOptions | CrystallizeOptions | SquareOptions | HubSpotOptions | VippsOptions;
 
 /**
  * Internal interface for provider verification functions
