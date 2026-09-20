@@ -29,7 +29,14 @@ export const svix: ProviderVerifier = {
     let timestamp: string | undefined;
     let msgId: string | undefined;
 
-    const parts = signature.split(',');
+    // Split on commas AND whitespace: svix separates the scheme from the
+    // signature with a comma but separates SIGNATURES from each other with a
+    // space (`v1,<sig1> v1,<sig2>`), which it does during a signing-secret
+    // rotation. Splitting on commas alone yields ['v1', '<sig1> v1', '<sig2>']
+    // — the first signature is captured with a trailing ' v1' and the second
+    // is dropped, so every signature fails for the duration of the rotation.
+    // Base64 contains no whitespace, so this cannot split a signature.
+    const parts = signature.split(/[,\s]+/);
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i].trim();
       if (part === 'v1' && i + 1 < parts.length) {
