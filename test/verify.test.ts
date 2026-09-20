@@ -456,6 +456,81 @@ describe('webhook-verify', () => {
         false
       );
     });
+
+    // Svix sends every signature it holds during a signing-secret rotation,
+    // space-separated: `v1,<old> v1,<new>`. Only one matches the secret the
+    // receiver has, and the message must be accepted on that one. Every test
+    // above uses a single signature, so this branch — which the provider's
+    // own doc comment describes — was never exercised.
+    function multiSig(sigs: string[], ts: number, id: string): string {
+      return `${sigs.map((s) => `v1,${s}`).join(' ')},t=${ts},id=${id}`;
+    }
+
+    function rawSig(body: string, key: string, id: string, ts: number): string {
+      const secretKey = key.startsWith('whsec_')
+        ? Buffer.from(key.slice(6), 'base64')
+        : Buffer.from(key, 'base64');
+      return createHmac('sha256', secretKey).update(`${id}.${ts}.${body}`).digest('base64');
+    }
+
+    describe('multiple signatures (secret rotation)', () => {
+      const ts = Math.floor(Date.now() / 1000);
+      const otherSecret = `whsec_${Buffer.from('a-different-secret-key').toString('base64')}`;
+      const thirdSecret = `whsec_${Buffer.from('third-secret-here-ok').toString('base64')}`;
+
+      it('should accept when the matching signature is FIRST', () => {
+        const good = rawSig(payload, secret, msgId, ts);
+        const stale = rawSig(payload, otherSecret, msgId, ts);
+        assert.strictEqual(verify('svix', payload, multiSig([good, stale], ts, msgId), secret), true);
+      });
+
+      it('should accept when the matching signature is LAST', () => {
+        // Position matters: splitting on commas alone corrupts the first
+        // signature and drops every later one, so a naive parser fails this
+        // case and the one above for different reasons.
+        const good = rawSig(payload, secret, msgId, ts);
+        const stale = rawSig(payload, otherSecret, msgId, ts);
+        assert.strictEqual(verify('svix', payload, multiSig([stale, good], ts, msgId), secret), true);
+      });
+
+      it('should accept the matching signature among three', () => {
+        const good = rawSig(payload, secret, msgId, ts);
+        const a = rawSig(payload, otherSecret, msgId, ts);
+        const b = rawSig(payload, thirdSecret, msgId, ts);
+        assert.strictEqual(verify('svix', payload, multiSig([a, good, b], ts, msgId), secret), true);
+      });
+
+      it('should still reject when NONE of the signatures match', () => {
+        // Without this, a parser that accepted any multi-signature header
+        // outright would pass the three tests above.
+        const a = rawSig(payload, otherSecret, msgId, ts);
+        const b = rawSig(payload, thirdSecret, msgId, ts);
+        assert.strictEqual(verify('svix', payload, multiSig([a, b], ts, msgId), secret), false);
+      });
+
+      it('should apply the timestamp tolerance to multi-signature headers too', () => {
+        const old = ts - 3600;
+        const good = rawSig(payload, secret, msgId, old);
+        const stale = rawSig(payload, otherSecret, msgId, old);
+        assert.strictEqual(verify('svix', payload, multiSig([good, stale], old, msgId), secret), false);
+      });
+
+      it('should verify through the headers object, as Clerk sends it', () => {
+        // getSignature() joins the raw svix-signature header with t= and id=,
+        // so in production a multi-signature header reaches the parser via
+        // this path. Passing a pre-joined string bypasses it.
+        const good = rawSig(payload, secret, msgId, ts);
+        const stale = rawSig(payload, otherSecret, msgId, ts);
+        assert.strictEqual(
+          verify('svix', payload, {
+            'svix-id': msgId,
+            'svix-timestamp': String(ts),
+            'svix-signature': `v1,${stale} v1,${good}`,
+          }, secret),
+          true
+        );
+      });
+    });
   });
 
   describe('Clerk', () => {
